@@ -1639,25 +1639,36 @@ async function startProcessing() {
   addLog(`Loaded ${products.length} products`, 'info');
   setProgress(15, 'Pre-processing products');
 
-  // DETERMINISTIC PRE-GROUPING: group products with near-identical titles first
-  // Strip size/count/pack suffixes to get a base title for comparison
-  function getBaseTitle(title) {
-    return title
-      .toLowerCase()
-      // Remove trailing size/count/pack info after last comma
-      .replace(/,\s*[\d.]+\s*(oz|fl oz|lb|lbs|g|ml|l|ct|count|tablets?|capsules?|caplets?|pack|pk|sq\.?\s*ft\.?).*$/i, '')
-      .replace(/\s*\(.*?(pack|ct|count|oz|lb|lbs|tablets?|capsules?).*?\)\s*$/i, '')
-      .replace(/\s+/g, ' ')
+  // Shared normalization — strips size/count/pack from title to get base product name
+  function normalizeTitle(title) {
+    let t = title.toLowerCase()
+      .replace(/\blbs\.?\b/g, 'lb')
       .trim();
+
+    // Remove trailing parentheticals
+    t = t.replace(/\s*\([^)]*\)\s*$/, '').trim();
+
+    // Repeatedly strip trailing size/count/pack/coverage after commas
+    const variantPattern = /,\s*(?:pack of \d+|\d+[\s-]?(?:pack|pk)|[\d.]+\s*(?:oz|fl\.?\s*oz|lb\.?s?|kg|g|mg|ml|l|gal\.?|qt\.?|pt\.?|cu\.?\s*ft\.?)|covers?\s+[\d,]+\s*sq\.?\s*ft\.?|\d+\s*(?:ct|count|tablets?|capsules?|caplets?|gummies?|pieces?|tabs?|units?)).*$/i;
+    for (let i = 0; i < 5; i++) {
+      const prev = t;
+      t = t.replace(variantPattern, '').trim();
+      if (t === prev) break;
+    }
+
+    return t.replace(/\.+$/, '').trim().slice(0, 150);
   }
 
-  // Group by base title — products with same base title are definitely same product
+  // Group by normalized title — products with same base title are definitely same product
   const preSortedGroups = {};
   products.forEach(p => {
-    const base = getBaseTitle(p.title);
+    const base = normalizeTitle(p.title);
     if (!preSortedGroups[base]) preSortedGroups[base] = [];
     preSortedGroups[base].push(p);
   });
+
+  const multiGroups = Object.values(preSortedGroups).filter(g => g.length > 1).length;
+  addLog('Pre-grouped ' + multiGroups + ' sets of title-matched variants', 'info');
 
   // Sort by title so variants land in the same batch
   products.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
@@ -1753,6 +1764,7 @@ async function startProcessing() {
       g.items.forEach(idx => { idxToAIGroup[idx] = gIdx; });
     });
 
+    const beforeTitleFix = aiResult.groups.filter(g => g.items.length > 0).length;
     Object.values(preSortedGroups).forEach(groupProducts => {
       if (groupProducts.length < 2) return;
 
@@ -1765,11 +1777,13 @@ async function startProcessing() {
         if (aiResult.groups[primaryIdx] && aiResult.groups[secondaryIdx]) {
           aiResult.groups[primaryIdx].items.push(...aiResult.groups[secondaryIdx].items);
           aiResult.groups[secondaryIdx].items = [];
-          // Update lookup map
           aiResult.groups[primaryIdx].items.forEach(idx => { idxToAIGroup[idx] = primaryIdx; });
         }
       });
     });
+    aiResult.groups = aiResult.groups.filter(g => g.items.length > 0);
+    const afterTitleFix = aiResult.groups.length;
+    if (beforeTitleFix - afterTitleFix > 0) addLog('Title matcher merged ' + (beforeTitleFix - afterTitleFix) + ' split group(s)', 'success');
 
     // DETERMINISTIC SPLIT: break up groups that contain clearly different product types
     // Extract a product type fingerprint from each item's title
