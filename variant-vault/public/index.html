@@ -1239,6 +1239,22 @@
 
   .retailer-card-custom { border-style: dashed; }
 
+  .retailer-beta {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: 'DM Mono', monospace;
+    background: rgba(251,191,36,0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(251,191,36,0.25);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
   .retailer-group-label {
     font-family: 'DM Mono', monospace;
     font-size: 0.7rem;
@@ -1441,7 +1457,7 @@ async function checkPassword() {
   <div class="page-header">
     <div class="page-label">Step 01</div>
     <h1 class="page-title">Select your<br><em>retailer</em></h1>
-    <p class="page-sub">Choose the retailer you're preparing content for. This determines the template format and number of bullet points.</p>
+    <p class="page-sub">Choose the retailer you're preparing content for.</p>
   </div>
 
   <div class="retailer-grid" style="margin-bottom:8px;">
@@ -1453,24 +1469,28 @@ async function checkPassword() {
     </div>
     <div class="retailer-card" data-retailer="Walmart" data-bullets="10" onclick="selectRetailer(this)">
       <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-beta">Beta</div>
       <div class="retailer-icon">🛒</div>
       <div class="retailer-name">Walmart</div>
       <div class="retailer-bullets">10 bullets + description</div>
     </div>
     <div class="retailer-card" data-retailer="Target" data-bullets="5" onclick="selectRetailer(this)">
       <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-beta">Beta</div>
       <div class="retailer-icon">🎯</div>
       <div class="retailer-name">Target</div>
       <div class="retailer-bullets">5 bullets + description</div>
     </div>
     <div class="retailer-card" data-retailer="Lowes" data-bullets="5" onclick="selectRetailer(this)">
       <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-beta">Beta</div>
       <div class="retailer-icon">🔨</div>
       <div class="retailer-name">Lowe's</div>
       <div class="retailer-bullets">5 bullets + description</div>
     </div>
     <div class="retailer-card" data-retailer="Costco" data-bullets="5" onclick="selectRetailer(this)">
       <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-beta">Beta</div>
       <div class="retailer-icon">🏪</div>
       <div class="retailer-name">Costco</div>
       <div class="retailer-bullets">5 bullets + description</div>
