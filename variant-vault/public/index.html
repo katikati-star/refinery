@@ -1637,6 +1637,9 @@ async function startProcessing() {
   addLog(`Loaded ${products.length} products`, 'info');
   setProgress(15, 'Sending to AI for analysis');
 
+  // Sort by title so variants land in the same batch
+  products.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+
   const BATCH_SIZE = 50;
   const batches = [];
   for (let i = 0; i < products.length; i += BATCH_SIZE) {
