@@ -1670,30 +1670,34 @@ async function startProcessing() {
   const prompt = `You are grouping e-commerce product listings. Products are the same item sold in different variants and should be grouped together. Products that are fundamentally different items must never be grouped.
 
 TWO QUESTIONS TO ASK FOR EACH POTENTIAL GROUP:
-1. Is the base product name the same (ignoring size, color, count, or pack descriptors)?
-2. Does the difference between them reduce to ONLY one or more of: size, weight, volume, count, color, finish, scent, flavor, or number of units in a pack?
+1. Is the base product name the same (ignoring size, count, or pack descriptors)?
+2. Are ALL non-size attributes — flavor, color, scent, finish, formula, form factor — identical between them?
 
 If YES to both → same group.
 If NO to either → separate groups.
 
-VARIANT TYPES THAT QUALIFY (apply to any product category):
-- Different sizes or quantities: any numeric measurement differs (weight, volume, dimensions, area, count, pieces, doses, servings, etc.)
-- Different pack counts: single unit vs 2-pack, 3-pack, 6-pack, bulk, etc.
-- Different colors, finishes, patterns, scents, or flavors: purely aesthetic or sensory difference, same underlying product
+WHAT CAN DIFFER WITHIN A GROUP (size/quantity only):
+- Any numeric measurement: weight, volume, dimensions, area, count, pieces, doses, servings, etc.
+- Pack count: single unit vs multi-pack
 
-NON-VARIANT DIFFERENCES — keep separate regardless of name similarity:
+WHAT MUST BE IDENTICAL WITHIN A GROUP (everything else):
+- Flavor, color, scent, finish, pattern — if any of these differ, they are separate groups, no exceptions
+- Formula, ingredients, active agents, composition
+- Form factor (liquid, powder, tablet, spray, gel, etc.)
+- Intended use, application, or target
+- What is physically included in the box
+
+NON-VARIANT DIFFERENCES — always separate groups regardless of name similarity:
 - One includes an accessory, tool, applicator, or bundled item the other does not
-- One is a refill, replacement, or cartridge for a device (different product, not a size variant)
-- Different formulas, ingredients, active agents, or chemical compositions
-- Different form factors: liquid vs powder vs tablet vs spray vs concentrate vs gel
-- Different intended uses, surfaces, targets, or applications
-- Starter kit vs replacement/refill
-- Any descriptor that changes what you physically receive beyond just more/less of the same thing
+- One is a refill, replacement, or cartridge for a device
+- Different form factors
+- Different intended uses or applications
+- Any descriptor that changes what you physically receive beyond just more/less of the exact same thing
 
 MANDATORY GROUPS — pairs pre-verified by content analysis with 90%+ similarity. Place these in the same group, no exceptions:
 ${mustGroupPairs.length > 0 ? mustGroupPairs.join('\n') : '(none)'}
 
-ADVISORY (80-89% similarity) — group only if title differences are purely size, color, or pack count:
+ADVISORY (80-89% similarity) — group only if title differences are purely size or pack count, and all other attributes are identical:
 ${simHints.length > 0 ? simHints.join(', ') : '(none)'}
 
 PRODUCTS:
