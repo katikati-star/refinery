@@ -689,8 +689,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    user-select: text;
-    cursor: text;
   }
 
   .parent-badge {
@@ -1163,19 +1161,19 @@
 <nav>
   <div class="logo">Variant <span>Vault</span></div>
   <div class="nav-steps">
-    <div class="step-pill active" id="nav-1" onclick="navToStep(1)" style="cursor:pointer;">
+    <div class="step-pill active" id="nav-1">
       <div class="step-num">1</div> Retailer
     </div>
     <div class="step-divider"></div>
-    <div class="step-pill" id="nav-2" onclick="navToStep(2)" style="cursor:pointer;">
+    <div class="step-pill" id="nav-2">
       <div class="step-num">2</div> Upload
     </div>
     <div class="step-divider"></div>
-    <div class="step-pill" id="nav-3" onclick="navToStep(3)" style="cursor:pointer;">
+    <div class="step-pill" id="nav-3">
       <div class="step-num">3</div> Processing
     </div>
     <div class="step-divider"></div>
-    <div class="step-pill" id="nav-4" onclick="navToStep(4)" style="cursor:pointer;">
+    <div class="step-pill" id="nav-4">
       <div class="step-num">4</div> Review
     </div>
   </div>
@@ -1367,7 +1365,6 @@
       </div>
     </div>
     <div class="review-actions">
-      <button class="btn btn-ghost btn-sm" onclick="goToPage('page-upload', 2)">← Back</button>
       <button class="btn btn-ghost btn-sm" id="sort-az-btn" onclick="toggleSortAZ()">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h8M2 8h5M2 12h3M11 6v7M9 11l2 2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Sort by Title
@@ -1438,16 +1435,6 @@ function goToPage(pageId, stepNum) {
   // Show FAB only on review page
   const fab = document.getElementById('fab-new-group');
   if (fab) fab.style.display = pageId === 'page-review' ? 'flex' : 'none';
-}
-
-function navToStep(step) {
-  const pages = ['page-retailer', 'page-upload', 'page-processing', 'page-review'];
-  const maxStep = ['page-retailer','page-upload','page-processing','page-review']
-    .findIndex(p => document.getElementById(p).classList.contains('active')) + 1 ||
-    document.querySelectorAll('.step-pill.done').length + 1;
-  if (step <= maxStep) {
-    goToPage(pages[step - 1], step);
-  }
 }
 
 function selectRetailer(card) {
@@ -1637,315 +1624,75 @@ async function startProcessing() {
   });
 
   addLog(`Loaded ${products.length} products`, 'info');
-  setProgress(15, 'Pre-processing products');
+  setProgress(15, 'Sending to AI for analysis');
 
-  // Shared normalization — strips size/count/pack from title to get base product name
-  function normalizeTitle(title) {
-    let t = title.toLowerCase()
-      .replace(/\blbs\.?\b/g, 'lb')
-      .trim();
+  const productLines = products.map(p => '[' + p.idx + '] ' + p.title).join('\n');
+  const prompt = `Product grouping task for e-commerce listings.
 
-    // Remove trailing parentheticals
-    t = t.replace(/\s*\([^)]*\)\s*$/, '').trim();
+GOAL: Group items that are the SAME base product offered in different variants. Different variants of the same product should be in one group. Completely different products must never be grouped together.
 
-    // Repeatedly strip trailing size/count/pack/coverage after commas
-    const variantPattern = /,\s*(?:pack of \d+|\d+[\s-]?(?:pack|pk)|[\d.]+\s*(?:oz|fl\.?\s*oz|lb\.?s?|kg|g|mg|ml|l|gal\.?|qt\.?|pt\.?|cu\.?\s*ft\.?)|covers?\s+[\d,]+\s*sq\.?\s*ft\.?|\d+\s*(?:ct|count|tablets?|capsules?|caplets?|gummies?|pieces?|tabs?|units?)).*$/i;
-    for (let i = 0; i < 5; i++) {
-      const prev = t;
-      t = t.replace(variantPattern, '').trim();
-      if (t === prev) break;
-    }
+WHAT COUNTS AS A VARIANT (group these together):
+- Size/quantity variants: different weights, volumes, counts, dimensions, or coverage areas of the same product (e.g. 1 lb vs 3 lb vs 5 lb, 1 gal vs 1.33 gal, 10-count vs 12-count)
+- Multi-packs: a single unit and its bundle/pack versions are the same product (e.g. "Product X" and "Product X (2-pack)" or "Product X (6-pack)")
+- Color/finish/scent/flavor variants: the same product in different colors, finishes, scents, or flavors
+- Format variants: the same product in a different form factor — e.g. a device and its refill or refill kit, a concentrate and its ready-to-use version, a starter kit and its replacement/refill — as long as they share the same core product identity
+- Minor title wording differences: ignore small differences like punctuation, abbreviations (lb vs lbs), word order, or slight descriptor changes if the core product is clearly the same
 
-    return t.replace(/\.+$/, '').trim().slice(0, 150);
-  }
+WHAT IS NOT A VARIANT (do NOT group these):
+- Products with different active ingredients, formulas, or core functions — even if from the same brand
+- Products targeting different use cases, surfaces, or applications
+- Products that happen to share a size but are fundamentally different items
 
-  // Group by normalized title — products with same base title are definitely same product
-  const preSortedGroups = {};
-  products.forEach(p => {
-    const base = normalizeTitle(p.title);
-    if (!preSortedGroups[base]) preSortedGroups[base] = [];
-    preSortedGroups[base].push(p);
-  });
+For each group, pick a clean short name (strip size/color/pack info from the name) and write a brief reason summarizing the variant axis (e.g. "Size variants: 1lb, 3lb, 5lb" or "Multi-pack variants: single, 2-pack, 6-pack" or "Color variants: Black, Brown, Red" or "Base + Refill").
 
-  const multiGroups = Object.values(preSortedGroups).filter(g => g.length > 1).length;
-  addLog('Pre-grouped ' + multiGroups + ' sets of title-matched variants', 'info');
+PRODUCTS:
+${productLines}
 
-  // Sort by title so variants land in the same batch
-  products.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+Reply ONLY with compact JSON, no markdown, no explanation:
+{"groups":[{"name":"short product name","reason":"brief variant summary","items":[0,2,5]}],"ungrouped":[3,7],"extracted":{"0":{"size":"1 lb","color":""},"2":{"size":"3 lb","color":""}}}`;
 
-  const BATCH_SIZE = 100;
-  const batches = [];
-  for (let i = 0; i < products.length; i += BATCH_SIZE) {
-    batches.push(products.slice(i, i + BATCH_SIZE));
-  }
+  addLog('Calling Claude AI...', 'info');
+  setProgress(25, 'AI analyzing product variants');
 
-  addLog('Calling Claude AI in ' + batches.length + ' batch' + (batches.length > 1 ? 'es' : '') + '...', 'info');
-  setProgress(25, 'AI analyzing size and color variants');
-
-  let aiResult = { groups: [], ungrouped: [], uncertain: [], extracted: {} };
+  let aiResult = null;
 
   try {
-    // Run all batches in parallel
-    const batchPromises = batches.map((batch, batchIdx) => {
-      const productLines = batch.map(p => {
-        const bullets = (p.bullets || []).slice(0, 3).join(' | ');
-        const desc = p.desc ? p.desc.slice(0, 100) : '';
-        return '[' + p.idx + '] TITLE: ' + p.title + (bullets ? '\n    BULLETS: ' + bullets : '') + (desc ? '\n    DESC: ' + desc : '');
-      }).join('\n\n');
+    addLog('Sending request...', 'info');
 
-      const batchPrompt = 'You are a product variant grouping specialist. Your job is to assign every product to a group.\n\nRULES:\n1. Every product MUST be assigned to exactly one group — no exceptions, no skipping\n2. Products go in the SAME group only if they are the SAME product differing only by SIZE or COLOR\n   - Same product, different size (oz, lb, count, sq ft, ml, gal, etc.) = SAME group\n   - Same product, different color = SAME group\n   - Same product, different pack quantity (1-pack vs 2-pack) = SAME group\n   - Same product + refill version = SAME group ONLY if bullets/description confirm same formula\n3. Products go in DIFFERENT groups if they differ by ANYTHING other than size/color:\n   - Different product name or type = DIFFERENT\n   - Different formula, NPK ratio, or ingredients = DIFFERENT\n   - Different target (rose vs tomato vs palm vs orchid) = DIFFERENT\n   - Different applicator (with Comfort Wand vs standard) = DIFFERENT\n   - Concentrate vs Ready-to-Use = DIFFERENT\n   - Different grass type, pest target, or use case = DIFFERENT\n4. Solo products (no variants present) get their own single-item group\n5. Use title first, then bullets/description to confirm\n\nFor each group, also extract the size and color that distinguishes the variants.\n\nPRODUCTS:\n' + productLines + '\n\nReply ONLY with compact JSON — every product index must appear in exactly one group:\n{"groups":[{"items":[0,2],"size_key":"size","color_key":"color","extracted":{"0":{"size":"8 lb","color":""},"2":{"size":"4.5 lb","color":""}}}]}';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
-
-      return fetch('/api/group', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: batchPrompt }),
-      }).then(r => {
-        addLog('Batch ' + (batchIdx + 1) + ' of ' + batches.length + ' complete', 'info');
-        setProgress(25 + Math.round(((batchIdx + 1) / batches.length) * 45), 'Processing batch ' + (batchIdx + 1) + ' of ' + batches.length);
-        return r.json();
-      }).then(data => {
-        // Log raw response for debugging
-        if (data && data.content) {
-          addLog('Batch ' + (batchIdx+1) + ' has content blocks: ' + data.content.length, 'info');
-        } else if (data && data.error) {
-          addLog('Batch ' + (batchIdx+1) + ' API error: ' + JSON.stringify(data.error), 'warn');
-        } else {
-          addLog('Batch ' + (batchIdx+1) + ' unexpected response: ' + JSON.stringify(data).slice(0, 100), 'warn');
-        }
-        return data;
-      });
+    const response = await fetch('/api/group', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt }),
     });
 
-    const batchResults = await Promise.all(batchPromises);
-    addLog('All batches received', 'success');
+    clearTimeout(timeout);
+    addLog(`Response status: ${response.status}`, response.ok ? 'info' : 'warn');
 
-    // Merge results — rebase group IDs to avoid collisions
-    let groupIdOffset = 0;
-    batchResults.forEach((data, batchIdx) => {
-      try {
-        const text = data.content.map(c => c.text || '').join('');
-        const clean = text.replace(/```json|```/g, '').trim();
-        const result = JSON.parse(clean);
+    const data = await response.json();
 
-        // Merge extracted size/color
-        (result.groups || []).forEach(g => {
-          Object.assign(aiResult.extracted, g.extracted || {});
-        });
-
-        // No ungrouped — every item must be in a group
-        // Merge groups
-        (result.groups || []).forEach(g => {
-          aiResult.groups.push({
-            name: g.name || '',
-            reason: g.reason || '',
-            items: (g.items || []).map(i => typeof i === 'string' ? parseInt(i) : i)
-          });
-        });
-
-        groupIdOffset += (result.groups || []).length;
-      } catch (e) {
-        addLog('Batch ' + (batchIdx + 1) + ' parse error: ' + e.message, 'warn');
-        addLog('Raw: ' + (data.content ? data.content.map(c => c.text||'').join('').slice(0,120) : 'no content'), 'warn');
-        batches[batchIdx].forEach(p => aiResult.ungrouped.push(p.idx));
-      }
-    });
-
-    addLog('Identified ' + aiResult.groups.length + ' groups across ' + batches.length + ' batches', 'success');
-
-    // First: promote ALL ungrouped items into solo groups so title matcher can find them
-    (aiResult.ungrouped || []).forEach(idx => {
-      aiResult.groups.push({ name: '', reason: '', items: [idx] });
-    });
-    aiResult.ungrouped = [];
-
-    // DETERMINISTIC POST-FIX: ensure products with identical base titles are in the same group
-    addLog('Applying deterministic title matching...', 'info');
-
-    // Build a map of idx -> AI group index for fast lookup
-    const idxToAIGroup = {};
-    aiResult.groups.forEach((g, gIdx) => {
-      g.items.forEach(idx => { idxToAIGroup[idx] = gIdx; });
-    });
-
-    const beforeTitleFix = aiResult.groups.filter(g => g.items.length > 0).length;
-    let titleMatchAttempts = 0, titleMatchFixed = 0;
-    Object.values(preSortedGroups).forEach(groupProducts => {
-      if (groupProducts.length < 2) return;
-      titleMatchAttempts++;
-
-      const mappings = groupProducts.map(p => ({ idx: p.idx, gIdx: idxToAIGroup[p.idx], asin: p.asin }));
-      const aiGroupIdxSet = new Set(mappings.map(m => m.gIdx).filter(x => x !== undefined));
-
-      // Debug: log for known problem ASINs
-      const problemAsins = ['B0025QIFDG','B01MZ6WIT5','B0DSGH48Y8','B0DV1CDX2Q'];
-      if (groupProducts.some(p => problemAsins.includes(p.asin))) {
-        addLog('DEBUG split: ' + groupProducts.map(p => p.asin + '(idx=' + p.idx + ',gIdx=' + idxToAIGroup[p.idx] + ')').join(' | '), 'warn');
-      }
-
-      if (aiGroupIdxSet.size <= 1) return;
-
-      titleMatchFixed++;
-      const groupIdxArray = [...aiGroupIdxSet];
-      const primaryIdx = groupIdxArray[0];
-      groupIdxArray.slice(1).forEach(secondaryIdx => {
-        if (aiResult.groups[primaryIdx] && aiResult.groups[secondaryIdx]) {
-          aiResult.groups[primaryIdx].items.push(...aiResult.groups[secondaryIdx].items);
-          aiResult.groups[secondaryIdx].items = [];
-          aiResult.groups[primaryIdx].items.forEach(idx => { idxToAIGroup[idx] = primaryIdx; });
-        }
-      });
-    });
-    aiResult.groups = aiResult.groups.filter(g => g.items.length > 0);
-    const afterTitleFix = aiResult.groups.length;
-    addLog('Title matcher: checked ' + titleMatchAttempts + ' sets, fixed ' + titleMatchFixed + ', merged ' + (beforeTitleFix - afterTitleFix) + ' groups', titleMatchFixed > 0 ? 'success' : 'warn');
-
-    // DETERMINISTIC SPLIT: break up groups that contain clearly different product types
-    // Extract a product type fingerprint from each item's title
-    function getProductFingerprint(title) {
-      const t = title.toLowerCase()
-        .replace(/\blbs\.?\b/g, 'lb') // normalize lbs -> lb
-        .replace(/\.+$/, '')            // remove trailing periods
-        .trim();
-
-      // Format variants always get their own group
-      if (/\bwith comfort wand\b/.test(t)) return t + '|wand';
-      if (/\brefill\b/.test(t)) return t.replace(/,[\s\S]*$/, '').trim() + '|refill';
-      if (/\bconcentrate\b/.test(t)) return t.replace(/,[\s\S]*$/, '').trim() + '|conc';
-      if (/\bready.to.spray|readyspray\b/.test(t)) return t.replace(/,[\s\S]*$/, '').trim() + '|rts';
-
-      let core = t;
-
-      // Remove trailing parentheticals like (2-pack), (8 oz)
-      core = core.replace(/\s*\([^)]*\)\s*$/, '').trim();
-
-      // Strip trailing comma-separated variant descriptors (size, count, pack, coverage)
-      const variantPattern = /,\s*(?:pack of \d+|\d+[\s-]?(?:pack|pk)|[\d.]+\s*(?:oz|fl\.?\s*oz|lb\.?s?|kg|g|mg|ml|l|gal\.?|qt\.?|pt\.?|cu\.?\s*ft\.?)|covers?\s+[\d,]+\s*sq\.?\s*ft\.?|\d+\s*(?:ct|count|tablets?|capsules?|caplets?|gummies?|pieces?|tabs?|units?)).*$/i;
-      for (let i = 0; i < 5; i++) {
-        const prev = core;
-        core = core.replace(variantPattern, '').trim();
-        if (core === prev) break;
-      }
-
-      // Normalize trailing periods
-      core = core.replace(/\.+$/, '').trim();
-
-      return core.slice(0, 120);
+    if (!response.ok) {
+      addLog(`API error: ${JSON.stringify(data.error || data)}`, 'warn');
+      throw new Error(data.error?.message || 'API error');
     }
 
-    const newGroups = [];
-    aiResult.groups.forEach(g => {
-      if (g.items.length <= 1) { newGroups.push(g); return; }
+    setProgress(70, 'Processing AI response');
+    const text = data.content.map(c => c.text || '').join('');
+    addLog('AI response received', 'success');
 
-      // Get fingerprint for each item
-      const fingerprints = {};
-      g.items.forEach(idx => {
-        const p = products[idx];
-        if (p) fingerprints[idx] = getProductFingerprint(p.title);
-      });
-
-      // Group items by fingerprint
-      const fingerprintGroups = {};
-      g.items.forEach(idx => {
-        const fp = fingerprints[idx] || 'unknown';
-        if (!fingerprintGroups[fp]) fingerprintGroups[fp] = [];
-        fingerprintGroups[fp].push(idx);
-      });
-
-      if (Object.keys(fingerprintGroups).length === 1) {
-        // All same fingerprint — keep as one group
-        newGroups.push(g);
-      } else {
-        // Different product types — split into separate groups
-        Object.values(fingerprintGroups).forEach(items => {
-          newGroups.push({ ...g, items });
-        });
-      }
-    });
-
-    const splitCount = newGroups.length - aiResult.groups.length;
-    if (splitCount > 0) addLog('Split ' + splitCount + ' incorrectly merged group(s) via product type matching', 'success');
-    aiResult.groups = newGroups.filter(g => g.items.length > 0);
-
-    // Remove empty groups from title matching
-    aiResult.groups = aiResult.groups.filter(g => g.items.length > 0);
-    const fixedSplits = Object.values(preSortedGroups).filter(gp => gp.length > 1).length;
-    addLog('Title matching applied', 'success');
-
-    // IMAGE SECOND PASS: for uncertain items, fetch Amazon images and re-check
-    const uncertainIndices = [...new Set(aiResult.uncertain || [])];
-    if (uncertainIndices.length > 0) {
-      addLog('Fetching images for ' + uncertainIndices.length + ' uncertain item(s)...', 'info');
-      setProgress(72, 'Checking images for uncertain items');
-
-      // Only do image pass for Amazon retailer
-      if (state.retailer === 'Amazon') {
-        const uncertainProducts = uncertainIndices.map(idx => products[idx]).filter(Boolean);
-
-        // Fetch images in parallel
-        const imageResults = await Promise.all(
-          uncertainProducts.map(p =>
-            fetch('/api/fetch-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ asin: p.asin }),
-            }).then(r => r.json()).catch(() => null)
-          )
-        );
-
-        const images = imageResults
-          .filter(r => r && r.imageUrl)
-          .map(r => ({ asin: r.asin, url: r.imageUrl }));
-
-        if (images.length > 0) {
-          addLog('Got ' + images.length + ' images, running visual check...', 'info');
-
-          const uncertainLines = uncertainProducts.map(p => '[' + p.idx + '] ' + p.title).join('\n');
-          const imagePrompt = 'Look at the product images above. These products have ambiguous titles and need visual confirmation for grouping.\n\nFor each product shown, confirm or adjust which group it belongs to. Products that look like the SAME item (same packaging, same product) should be in the same group, even if titles differ slightly.\n\nUNCERTAIN PRODUCTS:\n' + uncertainLines + '\n\nCurrent groupings for these items (group name -> indices):\n' + aiResult.groups.map((g, i) => g.name + ': [' + g.items.filter(idx => uncertainIndices.includes(idx)).join(',') + ']').filter(s => !s.endsWith(': []')).join('\n') + '\n\nReply ONLY with compact JSON — just the corrected group assignments for the uncertain items:\n{"reassign":[{"idx":5,"group_name":"correct group name"},{"idx":8,"group_name":"correct group name"}]}';
-
-          try {
-            const imgResponse = await fetch('/api/group', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt: imagePrompt, images }),
-            });
-            const imgData = await imgResponse.json();
-            const imgText = imgData.content.map(c => c.text || '').join('');
-            const imgClean = imgText.replace(/```json|```/g, '').trim();
-            const imgResult = JSON.parse(imgClean);
-
-            // Apply reassignments
-            if (imgResult.reassign && imgResult.reassign.length > 0) {
-              imgResult.reassign.forEach(({ idx, group_name }) => {
-                // Find the target group
-                const targetGroup = aiResult.groups.find(g => g.name.toLowerCase() === group_name.toLowerCase());
-                if (targetGroup) {
-                  // Remove from current group
-                  aiResult.groups.forEach(g => { g.items = g.items.filter(i => i !== idx); });
-                  // Add to target group
-                  targetGroup.items.push(idx);
-                }
-              });
-              // Remove empty groups
-              aiResult.groups = aiResult.groups.filter(g => g.items.length > 0);
-              addLog('Visual check applied ' + imgResult.reassign.length + ' correction(s)', 'success');
-            }
-          } catch (e) {
-            addLog('Image check failed: ' + e.message, 'warn');
-          }
-        } else {
-          addLog('Could not fetch images — skipping visual check', 'warn');
-        }
-      } else {
-        addLog('Image check skipped (non-Amazon retailer)', 'info');
-      }
-    }
-
-
+    const clean = text.replace(/```json|```/g, '').trim();
+    aiResult = JSON.parse(clean);
+    addLog(`Identified ${aiResult.groups.length} groups`, 'success');
   } catch (err) {
-    addLog('Error: ' + err.message + ' — using fallback grouping', 'warn');
+    addLog(`Error: ${err.message} — using fallback grouping`, 'warn');
+    // Fallback: each item in its own group
     aiResult = {
-      groups: products.map((p, i) => ({ name: p.title.slice(0, 40) || 'Product ' + (i+1), reason: 'No variants detected', items: [p.idx] })),
+      groups: products.map((p, i) => ({ name: p.title.slice(0, 40) || `Product ${i+1}`, reason: 'No variants detected', items: [p.idx] })),
       ungrouped: [],
       extracted: {}
     };
@@ -1955,45 +1702,21 @@ async function startProcessing() {
   addLog('Calculating content similarity scores...', 'info');
 
   // Build state.groups
-  state.groups = aiResult.groups.map((g, gIdx) => {
-    const firstProduct = products[g.items[0]];
-    const groupName = firstProduct ? firstProduct.title : (g.name || 'New Group');
-    return {
-      id: gIdx + 1,
-      name: groupName,
-      reason: g.reason,
-      items: g.items.map(itemIdx => {
-        const p = products[itemIdx];
-        const extr = (aiResult.extracted || {})[itemIdx] || (aiResult.extracted || {})[String(itemIdx)] || {};
-
-        // Deterministically extract size and color from title
-        const titleLower = (p.title || '').toLowerCase();
-
-        // Extract size: look for trailing size/count/pack after last comma
-        let detectedSize = extr.size || p.size || '';
-        if (!detectedSize) {
-          const sizeMatch = p.title.match(/,\s*([\d.]+\s*(?:oz|fl\.?\s*oz|lb\.?s?|kg|g|ml|l|gal\.?|qt\.?|pt\.?|cu\.?\s*ft\.?)[\s\S]*?)(?:\s*\(.*\))?\s*$/i)
-            || p.title.match(/,\s*(\d+[\s-]?(?:count|ct|pack|pk|tablets?|capsules?|pieces?)[\s\S]*?)(?:\s*\(.*\))?\s*$/i)
-            || p.title.match(/\((\d+[\s-]?(?:pack|pk|count|ct))\)\s*$/i);
-          if (sizeMatch) detectedSize = sizeMatch[1].trim();
-        }
-
-        // Extract color: look for color field or color words in title
-        let detectedColor = extr.color || p.color || '';
-        if (!detectedColor) {
-          const colorMatch = p.title.match(/\b(black|white|red|blue|green|brown|gray|grey|silver|gold|clear|natural|original|classic black|deep forest brown|sierra red|natural cedar)\b/i);
-          if (colorMatch) detectedColor = colorMatch[1];
-        }
-
-        return {
-          ...p,
-          extractedSize: detectedSize,
-          extractedColor: detectedColor,
-          groupId: gIdx + 1,
-        };
-      })
-    };
-  });
+  state.groups = aiResult.groups.map((g, gIdx) => ({
+    id: gIdx + 1,
+    name: g.name,
+    reason: g.reason,
+    items: g.items.map(itemIdx => {
+      const p = products[itemIdx];
+      const extr = (aiResult.extracted || {})[itemIdx] || {};
+      return {
+        ...p,
+        extractedSize: extr.size || p.size || '',
+        extractedColor: extr.color || p.color || '',
+        groupId: gIdx + 1,
+      };
+    })
+  }));
 
   state.ungrouped = (aiResult.ungrouped || []).map(itemIdx => {
     const p = products[itemIdx];
@@ -2094,7 +1817,7 @@ function buildGroupCard(group, displayNum) {
 
   card.innerHTML = `
     <div class="group-header" onclick="toggleGroup(this)">
-      <div class="group-num">${displayNum}</div>
+      <div class="group-num">G${displayNum}</div>
       <div class="group-name">${group.name}</div>
       <div class="group-parent-asin">
         <span class="group-parent-label">Parent</span>
@@ -2102,6 +1825,7 @@ function buildGroupCard(group, displayNum) {
       </div>
       <div class="group-meta">
         <div class="group-count">${group.items.length} item${group.items.length !== 1 ? 's' : ''}</div>
+        ${group.reason ? '<div class="group-reason">' + group.reason + '</div>' : ''}
       </div>
       <div class="icon-btn danger" title="Delete group" onclick="event.stopPropagation(); deleteGroup(${group.id})">
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v9h6V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2144,11 +1868,7 @@ function buildProductItemHTML(item, isParent, groupId) {
         <div class="check-label">Match</div>
       </div>
 
-      ${item.asin && state.retailer === 'Amazon'
-        ? '<img class="product-img" src="https://images-na.ssl-images-amazon.com/images/P/' + item.asin + '.01.LZZZZZZZ.jpg" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" alt="">' +
-          '<div class="product-img-placeholder" style="display:none;"></div>'
-        : '<div class="product-img-placeholder"></div>'
-      }
+      <div class="product-img-placeholder">📦</div>
 
       <!-- MAIN INFO -->
       <div class="product-info">
@@ -2158,8 +1878,8 @@ function buildProductItemHTML(item, isParent, groupId) {
         </div>
         <div class="product-title">${item.title || 'No title'}</div>
         <div class="product-tags">
-          ${hasSize ? '<span class="tag tag-size">Size: ' + item.extractedSize + '</span>' : '<span class="tag tag-none">No size</span>'}
-          ${hasColor ? '<span class="tag tag-color">Color: ' + item.extractedColor + '</span>' : '<span class="tag tag-none">No color</span>'}
+          ${hasSize ? '<span class="tag tag-size">Size: ' + item.extractedSize + '</span>' : '<span class="tag tag-none">No size detected</span>'}
+          ${hasColor ? '<span class="tag tag-color">Color: ' + item.extractedColor + '</span>' : ''}
         </div>
       </div>
 

@@ -3,27 +3,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { prompt, images } = req.body;
+  const { prompt } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Missing prompt' });
   }
 
   try {
-    let content;
-    if (images && images.length > 0) {
-      content = [];
-      for (const img of images) {
-        if (img.url) {
-          content.push({ type: 'image', source: { type: 'url', url: img.url } });
-          content.push({ type: 'text', text: `Above image is for ASIN: ${img.asin}` });
-        }
-      }
-      content.push({ type: 'text', text: prompt });
-    } else {
-      content = prompt;
-    }
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -32,9 +18,9 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 16000,
-        messages: [{ role: 'user', content }],
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }],
       }),
     });
 
