@@ -1755,6 +1755,12 @@ async function startProcessing() {
 
     addLog('Identified ' + aiResult.groups.length + ' groups across ' + batches.length + ' batches', 'success');
 
+    // First: promote ALL ungrouped items into solo groups so title matcher can find them
+    (aiResult.ungrouped || []).forEach(idx => {
+      aiResult.groups.push({ name: '', reason: '', items: [idx] });
+    });
+    aiResult.ungrouped = [];
+
     // DETERMINISTIC POST-FIX: ensure products with identical base titles are in the same group
     addLog('Applying deterministic title matching...', 'info');
 
