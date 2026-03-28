@@ -1,0 +1,2272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variant Vault — Product Grouping Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080d1a;
+    --surface: #0d1526;
+    --surface2: #111d35;
+    --border: #1e2d4d;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --accent2: #60a5fa;
+    --orange: #f97316;
+    --orange-hover: #ea6c0a;
+    --text: #f0f4ff;
+    --muted: #6b7fa8;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --radius: 12px;
+    --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(14,15,17,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .logo span { color: var(--orange); }
+
+  .nav-steps {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .step-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    transition: var(--transition);
+    cursor: default;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .step-pill.active {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .step-pill.done {
+    color: var(--accent);
+  }
+
+  .step-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .step-pill.active .step-num {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .step-pill.done .step-num {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .step-divider {
+    width: 24px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* PAGES */
+  .page { display: none; animation: fadeIn 0.3s ease; }
+  .page.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===================== PAGE 1: RETAILER SELECT ===================== */
+  #page-retailer {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 80px 40px;
+  }
+
+  .page-header {
+    margin-bottom: 56px;
+  }
+
+  .page-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--orange);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 3rem;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .page-title em {
+    font-style: italic;
+    color: var(--orange);
+  }
+
+  .page-sub {
+    font-size: 1rem;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 480px;
+  }
+
+  .retailer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .retailer-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .retailer-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: var(--transition);
+  }
+
+  .retailer-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .retailer-card.selected {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.08);
+  }
+
+  .retailer-card.selected .retailer-check {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .retailer-icon {
+    font-size: 1.8rem;
+  }
+
+  .retailer-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .retailer-bullets {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .retailer-check {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: var(--transition);
+  }
+
+  .retailer-check svg { width: 10px; height: 10px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition);
+    letter-spacing: 0.01em;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+
+  .btn-orange {
+    background: var(--orange);
+    color: #fff;
+  }
+
+  .btn-orange:hover {
+    background: var(--orange-hover);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1.5px solid var(--border);
+  }
+
+  .btn-ghost:hover {
+    color: var(--text);
+    border-color: var(--text);
+  }
+
+  .btn-sm {
+    padding: 8px 16px;
+    font-size: 0.82rem;
+  }
+
+  /* ===================== PAGE 2: UPLOAD ===================== */
+  #page-upload {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 80px 40px;
+  }
+
+  .template-download-box {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    gap: 20px;
+  }
+
+  .template-info { flex: 1; }
+  .template-info h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+  .template-info p { font-size: 0.82rem; color: var(--muted); }
+
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 64px 40px;
+    text-align: center;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+    background: var(--surface);
+  }
+
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.04);
+  }
+
+  .upload-zone input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--surface2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+
+  .upload-zone h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+  .upload-zone p { font-size: 0.85rem; color: var(--muted); }
+
+  .upload-status {
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: var(--surface2);
+    border-radius: 8px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.88rem;
+  }
+
+  .upload-status.visible { display: flex; }
+  .upload-status .file-name { font-weight: 500; }
+  .upload-status .file-rows { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.78rem; }
+  .upload-status .remove-file { margin-left: auto; cursor: pointer; color: var(--muted); transition: var(--transition); }
+  .upload-status .remove-file:hover { color: var(--danger); }
+
+  /* ===================== PAGE 3: PROCESSING ===================== */
+  #page-processing {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 120px 40px;
+    text-align: center;
+  }
+
+  .processing-visual {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 40px;
+    position: relative;
+  }
+
+  .processing-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin 1s linear infinite;
+    position: absolute;
+  }
+
+  .processing-ring:nth-child(2) {
+    width: 60px;
+    height: 60px;
+    top: 10px;
+    left: 10px;
+    border-top-color: var(--accent2);
+    animation-duration: 0.7s;
+    animation-direction: reverse;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .processing-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  .processing-status {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 40px;
+    min-height: 1.4em;
+    transition: var(--transition);
+  }
+
+  .processing-log {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: left;
+    max-height: 240px;
+    overflow-y: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .log-line { display: flex; gap: 12px; }
+  .log-time { color: var(--border); flex-shrink: 0; }
+  .log-line.success .log-msg { color: var(--success); }
+  .log-line.info .log-msg { color: var(--accent2); }
+  .log-line.warn .log-msg { color: var(--warning); }
+
+  /* ===================== PAGE 4: REVIEW ===================== */
+  #page-review {
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .review-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    gap: 20px;
+  }
+
+  .review-stats {
+    display: flex;
+    gap: 24px;
+    margin-top: 12px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--orange);
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .review-actions { display: flex; gap: 10px; align-items: center; }
+
+  .groups-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .group-card {
+    background: #0f1218 !important;
+    border: 1px solid #1a1f2e;
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: var(--transition);
+  }
+
+  .group-card.drag-over {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 2px rgba(249,115,22,0.15);
+  }
+
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    background: #13171f;
+    border-bottom: 1px solid #1a1f2e;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .group-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    background: rgba(249,115,22,0.15);
+    color: var(--orange);
+    border: 1px solid rgba(249,115,22,0.25);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .group-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex: 1;
+  }
+
+  .group-meta {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .group-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .group-parent-asin {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 100px;
+    background: rgba(249,115,22,0.08);
+    border: 1px solid rgba(249,115,22,0.18);
+  }
+
+  .group-parent-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--orange);
+  }
+
+  .group-parent-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text);
+  }
+
+  .group-reason {
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: rgba(255,255,255,0.04);
+    padding: 3px 10px;
+    border-radius: 100px;
+    border: 1px solid #1a1f2e;
+  }
+
+  .group-toggle {
+    color: var(--muted);
+    transition: var(--transition);
+  }
+
+  .group-card.collapsed .group-toggle { transform: rotate(-90deg); }
+
+  .group-items {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .group-card.collapsed .group-items { display: none; }
+
+  /* PRODUCT ITEM ROW */
+  .product-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #0a0e18;
+    border: 1px solid #1a1f2e;
+    border-radius: 8px;
+    cursor: grab;
+    transition: var(--transition);
+    position: relative;
+  }
+
+  .product-item:active { cursor: grabbing; }
+
+  .product-item.dragging {
+    opacity: 0.4;
+    border-style: dashed;
+  }
+
+  .product-item.is-parent {
+    border-left: 2px solid var(--orange);
+    background: rgba(249,115,22,0.03);
+  }
+
+  .product-item:hover {
+    border-color: #2a3050;
+    background: #0d1120;
+  }
+
+  .drag-handle {
+    color: var(--border);
+    cursor: grab;
+    flex-shrink: 0;
+    transition: var(--transition);
+  }
+
+  .product-item:hover .drag-handle { color: var(--muted); }
+
+  .product-img {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    background: var(--surface2);
+    object-fit: contain;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+
+  .product-img-placeholder {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    background: var(--surface2);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border);
+    border: 1px solid var(--border);
+    font-size: 1.2rem;
+  }
+
+  .product-info { flex: 1; min-width: 0; }
+
+  .product-asin {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .parent-badge {
+    background: rgba(249,115,22,0.12);
+    color: var(--orange);
+    border: 1px solid rgba(249,115,22,0.25);
+    padding: 1px 7px;
+    border-radius: 100px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .product-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 6px;
+  }
+
+  .product-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .tag-size {
+    background: rgba(255,255,255,0.05);
+    color: #a0aec0;
+    border: 1px solid #1e2535;
+  }
+
+  .tag-color {
+    background: rgba(249,115,22,0.08);
+    color: var(--orange);
+    border: 1px solid rgba(249,115,22,0.2);
+  }
+
+  .content-check-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 48px;
+    gap: 2px;
+  }
+
+  .check-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .check-pct.high { color: var(--success); }
+  .check-pct.mid { color: var(--warning); }
+  .check-pct.low { color: var(--danger); }
+
+  .check-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .tag-none {
+    background: rgba(107,114,128,0.1);
+    color: var(--muted);
+    border: 1px solid rgba(107,114,128,0.15);
+    font-style: italic;
+  }
+
+  .item-actions {
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: var(--transition);
+  }
+
+  .product-item:hover .item-actions { opacity: 1; }
+
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    font-size: 0.75rem;
+  }
+
+  .icon-btn:hover { color: var(--text); border-color: var(--text); }
+  .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* UNGROUPED SECTION */
+  .ungrouped-section {
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .ungrouped-header {
+    padding: 16px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  /* ADD GROUP */
+  .add-group-btn {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.88rem;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .add-group-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(59,130,246,0.04);
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    width: 90%;
+    max-width: 480px;
+    animation: slideUp 0.2s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal h3 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 8px; }
+  .modal p { color: var(--muted); font-size: 0.88rem; margin-bottom: 24px; }
+
+  .modal-select {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    outline: none;
+    transition: var(--transition);
+  }
+
+  .modal-select:focus { border-color: var(--accent); }
+
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideUp 0.2s ease;
+    min-width: 240px;
+  }
+
+  .toast.success { border-color: rgba(74,222,128,0.3); }
+  .toast.error { border-color: rgba(255,92,92,0.3); }
+
+  /* FLOATING ACTION BUTTON */
+  .fab {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    z-index: 150;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 100px;
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(59,130,246,0.35), 0 2px 8px rgba(0,0,0,0.4);
+    transition: var(--transition);
+    animation: fabIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  .fab:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(59,130,246,0.45), 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  .fab:active { transform: scale(0.97); }
+
+  .fab.fab-droppable {
+    box-shadow: 0 8px 32px rgba(59,130,246,0.5), 0 2px 8px rgba(0,0,0,0.4);
+  }
+
+  .fab.fab-active {
+    background: #fff;
+    transform: scale(1.08);
+    box-shadow: 0 16px 48px rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.5);
+  }
+
+  @keyframes fabIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .group-empty-dropzone {
+    padding: 20px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--muted);
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    margin: 4px;
+    transition: var(--transition);
+  }
+
+  .group-card.drag-over .group-empty-dropzone {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: rgba(249,115,22,0.04);
+  }
+
+  .drop-indicator {
+    height: 2px;
+    background: var(--orange);
+    border-radius: 2px;
+    margin: 2px 0;
+    pointer-events: none;
+    box-shadow: 0 0 6px rgba(249,115,22,0.5);
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ===================== CUSTOM CONFIG PAGE ===================== */
+  #page-custom {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 80px 40px;
+  }
+
+  .custom-config-box { display: flex; flex-direction: column; gap: 28px; }
+  .custom-field { display: flex; flex-direction: column; gap: 10px; }
+
+  .custom-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .custom-input {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: var(--transition);
+    width: 100%;
+  }
+
+  .custom-input:focus { border-color: var(--accent); }
+  .custom-input::placeholder { color: var(--muted); }
+
+  .bullet-picker {
+    display: flex;
+    align-items: center;
+    width: 160px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .bullet-btn {
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bullet-btn:hover { background: var(--surface2); color: var(--orange); }
+
+  .bullet-count {
+    flex: 1;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--text);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .custom-hint { font-size: 0.78rem; color: var(--muted); }
+
+  .toggle-row {
+    display: flex;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    width: 160px;
+  }
+
+  .toggle-opt {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--muted);
+    transition: var(--transition);
+  }
+
+  .toggle-opt.selected { background: var(--accent); color: #fff; }
+  .toggle-opt:not(.selected):hover { background: var(--surface2); color: var(--text); }
+
+  .retailer-card-custom { border-style: dashed; }
+
+  .retailer-group-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    nav { padding: 16px 20px; }
+    .nav-steps { display: none; }
+    #page-retailer, #page-upload, #page-review { padding: 40px 20px; }
+    .retailer-grid { grid-template-columns: repeat(2, 1fr); }
+    .page-title { font-size: 2rem; }
+    .review-header { flex-direction: column; }
+  }
+
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 16px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-family: 'DM Mono', monospace;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .chip.retailer {
+    color: var(--orange);
+    border-color: rgba(249,115,22,0.3);
+    background: rgba(249,115,22,0.08);
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Variant <span>Vault</span></div>
+  <div class="nav-steps">
+    <div class="step-pill active" id="nav-1">
+      <div class="step-num">1</div> Retailer
+    </div>
+    <div class="step-divider"></div>
+    <div class="step-pill" id="nav-2">
+      <div class="step-num">2</div> Upload
+    </div>
+    <div class="step-divider"></div>
+    <div class="step-pill" id="nav-3">
+      <div class="step-num">3</div> Processing
+    </div>
+    <div class="step-divider"></div>
+    <div class="step-pill" id="nav-4">
+      <div class="step-num">4</div> Review
+    </div>
+  </div>
+  <div id="nav-retailer-chip" style="display:none"></div>
+</nav>
+
+<!-- ===================== PAGE 1: RETAILER ===================== -->
+<div id="page-retailer" class="page active">
+  <div class="page-header">
+    <div class="page-label">Step 01</div>
+    <h1 class="page-title">Select your<br><em>retailer</em></h1>
+    <p class="page-sub">Choose the retailer you're preparing content for. This determines the template format and number of bullet points.</p>
+  </div>
+
+  <div class="retailer-group-label">Standard format — 5 bullets + description</div>
+  <div class="retailer-grid" style="margin-bottom:8px;">
+    <div class="retailer-card" data-retailer="Amazon" data-bullets="5" onclick="selectRetailer(this)">
+      <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-icon">📦</div>
+      <div class="retailer-name">Amazon</div>
+      <div class="retailer-bullets">5 bullets + description</div>
+    </div>
+    <div class="retailer-card" data-retailer="Walmart" data-bullets="10" onclick="selectRetailer(this)">
+      <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-icon">🛒</div>
+      <div class="retailer-name">Walmart</div>
+      <div class="retailer-bullets">10 bullets + description</div>
+    </div>
+    <div class="retailer-card" data-retailer="Target" data-bullets="5" onclick="selectRetailer(this)">
+      <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-icon">🎯</div>
+      <div class="retailer-name">Target</div>
+      <div class="retailer-bullets">5 bullets + description</div>
+    </div>
+    <div class="retailer-card" data-retailer="Lowes" data-bullets="5" onclick="selectRetailer(this)">
+      <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-icon">🔨</div>
+      <div class="retailer-name">Lowe's</div>
+      <div class="retailer-bullets">5 bullets + description</div>
+    </div>
+    <div class="retailer-card" data-retailer="Costco" data-bullets="5" onclick="selectRetailer(this)">
+      <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-icon">🏪</div>
+      <div class="retailer-name">Costco</div>
+      <div class="retailer-bullets">5 bullets + description</div>
+    </div>
+    <div class="retailer-card" data-retailer="Other" data-bullets="5" onclick="selectRetailer(this)">
+      <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-icon">🏬</div>
+      <div class="retailer-name">Other</div>
+      <div class="retailer-bullets">5 bullets + description</div>
+    </div>
+  </div>
+
+  <div class="retailer-group-label" style="margin-top:24px;">Custom format</div>
+  <div class="retailer-grid" style="grid-template-columns: repeat(2, 1fr); max-width: 340px;">
+    <div class="retailer-card retailer-card-custom" data-retailer="Custom" data-bullets="0" onclick="selectRetailer(this)">
+      <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="retailer-icon">⚙️</div>
+      <div class="retailer-name">Custom</div>
+      <div class="retailer-bullets">You choose bullet count</div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="retailer-next-btn" disabled onclick="handleRetailerNext()" style="margin-top:40px;">
+    Continue
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<!-- ===================== PAGE 1B: CUSTOM CONFIG ===================== -->
+<div id="page-custom" class="page">
+  <div class="page-header">
+    <div class="page-label">Step 01 — Custom</div>
+    <h1 class="page-title">Configure your<br><em>template</em></h1>
+    <p class="page-sub">Set a retailer name and choose how many bullet points your template should include.</p>
+  </div>
+
+  <div class="custom-config-box">
+    <div class="custom-field">
+      <label class="custom-label">Retailer name</label>
+      <input type="text" id="custom-retailer-name" class="custom-input" placeholder="e.g. Home Depot, Chewy, CVS…" oninput="validateCustom()">
+    </div>
+    <div class="custom-field">
+      <label class="custom-label">Number of bullet points</label>
+      <div class="bullet-picker">
+        <button class="bullet-btn" onclick="adjustBullets(-1)">−</button>
+        <div class="bullet-count" id="bullet-count-display">5</div>
+        <button class="bullet-btn" onclick="adjustBullets(1)">+</button>
+      </div>
+      <p class="custom-hint">Min 1 — Max 10</p>
+    </div>
+    <div class="custom-field">
+      <label class="custom-label">Include description field?</label>
+      <div class="toggle-row">
+        <div class="toggle-opt selected" id="toggle-yes" onclick="setDescription(true)">Yes</div>
+        <div class="toggle-opt" id="toggle-no" onclick="setDescription(false)">No</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px; margin-top:32px;">
+    <button class="btn btn-ghost" onclick="goToPage('page-retailer', 1)">← Back</button>
+    <button class="btn btn-primary" id="custom-next-btn" disabled onclick="goToUpload()">
+      Continue to Upload
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ===================== PAGE 2: UPLOAD ===================== -->
+<div id="page-upload" class="page">
+  <div class="page-header">
+    <div class="page-label">Step 02</div>
+    <h1 class="page-title">Upload your<br><em>content file</em></h1>
+    <p class="page-sub">Download the template, fill it in with your product data, then upload it here.</p>
+  </div>
+
+  <div class="template-download-box">
+    <div class="template-info">
+      <h3>📄 Download Template</h3>
+      <p id="template-desc">CSV template for your selected retailer with the correct column structure.</p>
+    </div>
+    <button class="btn btn-orange btn-sm" onclick="downloadTemplate()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Download Template
+    </button>
+  </div>
+
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)" id="file-input">
+    <div class="upload-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h3>Drop your CSV or Excel file here</h3>
+    <p>or click to browse — .csv, .xlsx, .xls supported</p>
+  </div>
+
+  <div class="upload-status" id="upload-status">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div>
+      <div class="file-name" id="file-name-display"></div>
+      <div class="file-rows" id="file-rows-display"></div>
+    </div>
+    <div class="remove-file" onclick="removeFile()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px; margin-top:32px;">
+    <button class="btn btn-ghost" onclick="goToPage('page-retailer', 1)">← Back</button>
+    <button class="btn btn-primary" id="upload-next-btn" disabled onclick="startProcessing()">
+        Run Product Groupings
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13 8A5 5 0 113 8a5 5 0 0110 0zM8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+  </div>
+</div>
+
+<!-- ===================== PAGE 3: PROCESSING ===================== -->
+<div id="page-processing" class="page">
+  <div class="processing-visual">
+    <div class="processing-ring"></div>
+    <div class="processing-ring"></div>
+  </div>
+  <h2 class="processing-title">Analyzing products…</h2>
+  <p class="processing-status" id="processing-status-text">Initializing AI engine</p>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-bar"></div>
+  </div>
+  <br>
+  <div class="processing-log" id="processing-log"></div>
+</div>
+
+<!-- ===================== PAGE 4: REVIEW ===================== -->
+<div id="page-review" class="page">
+  <div class="review-header">
+    <div>
+      <div class="page-label">Step 04 — Review & Edit</div>
+      <h1 style="font-family:'DM Serif Display',serif; font-size:2rem; letter-spacing:-0.02em;"><span style="color:var(--orange);">Review</span> Product Groupings</h1>
+      <div class="review-stats">
+        <div class="stat">
+          <div class="stat-val" id="stat-groups">0</div>
+          <div class="stat-label">Groups</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="stat-items">0</div>
+          <div class="stat-label">Items</div>
+        </div>
+      </div>
+    </div>
+    <div class="review-actions">
+      <button class="btn btn-ghost btn-sm" id="sort-az-btn" onclick="toggleSortAZ()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h8M2 8h5M2 12h3M11 6v7M9 11l2 2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sort by Title
+      </button>
+      <button class="btn btn-orange" onclick="exportCSV()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="groups-container" id="groups-container"></div>
+  <div style="height: 100px;"></div>
+</div>
+
+<!-- FLOATING NEW GROUP BUBBLE -->
+<div class="fab" id="fab-new-group" style="display:none;" title="Drag an item here to create a new group">
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  <span>Drop to New Group</span>
+</div>
+
+<!-- MOVE ITEM MODAL -->
+<div class="modal-overlay" id="move-modal">
+  <div class="modal">
+    <h3>Move Item</h3>
+    <p>Select which group to move this item to.</p>
+    <select class="modal-select" id="move-group-select"></select>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmMove()">Move Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  retailer: null,
+  bulletCount: 5,
+  rawData: [],
+  groups: [],       // [{id, name, reason, items:[...]}]
+  ungrouped: [],
+  movingItem: null,
+  movingFromGroup: null,
+};
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function goToPage(pageId, stepNum) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+
+  document.querySelectorAll('.step-pill').forEach((p, i) => {
+    p.classList.remove('active', 'done');
+    if (i + 1 < stepNum) p.classList.add('done');
+    if (i + 1 === stepNum) p.classList.add('active');
+  });
+
+  // Show FAB only on review page
+  const fab = document.getElementById('fab-new-group');
+  if (fab) fab.style.display = pageId === 'page-review' ? 'flex' : 'none';
+}
+
+function selectRetailer(card) {
+  document.querySelectorAll('.retailer-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  state.retailer = card.dataset.retailer;
+  state.bulletCount = parseInt(card.dataset.bullets);
+  document.getElementById('retailer-next-btn').disabled = false;
+}
+
+function goToUpload() {
+  // If custom, pull values from config page
+  if (state.retailer === 'Custom') {
+    const name = document.getElementById('custom-retailer-name').value.trim();
+    state.retailer = name;
+    state.bulletCount = customBullets;
+    state.includeDescription = customDescription;
+  }
+
+  const bc = state.bulletCount;
+  document.getElementById('template-desc').textContent =
+    state.retailer + ' template — ' + bc + ' bullet' + (bc > 1 ? 's' : '') + (state.includeDescription !== false ? ' + description' : '');
+
+  const chip = document.getElementById('nav-retailer-chip');
+  chip.innerHTML = '<span class="chip retailer">📦 ' + state.retailer + '</span>';
+  chip.style.display = 'block';
+
+  goToPage('page-upload', 2);
+}
+
+// ============================================================
+// TEMPLATE DOWNLOAD
+// ============================================================
+function downloadTemplate() {
+  const bc = state.bulletCount;
+  let headers = ['item_id', 'title'];
+  for (let i = 1; i <= bc; i++) headers.push('bullet_' + i);
+  if (state.includeDescription !== false) headers.push('description');
+  headers.push('hidden', 'special_features', 'brand', 'color', 'size', 'model');
+
+  const exampleRow = ['B0EXAMPLE1', 'Example Product Title'];
+  for (let i = 1; i <= bc; i++) exampleRow.push(i === 1 ? 'First bullet point' : '');
+  if (state.includeDescription !== false) exampleRow.push('Example description');
+  exampleRow.push('', '', 'Brand Name', '', '', 'Model-123');
+
+  const csv = [headers.join(','), exampleRow.map(v => '"' + v + '"').join(',')].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'variant-vault-template-' + state.retailer.toLowerCase().replace(/\s+/g, '-') + '.csv';
+  a.click();
+  showToast('Template downloaded!', 'success');
+}
+
+// ============================================================
+// CUSTOM CONFIG
+// ============================================================
+let customBullets = 5;
+let customDescription = true;
+
+function adjustBullets(delta) {
+  customBullets = Math.min(10, Math.max(1, customBullets + delta));
+  document.getElementById('bullet-count-display').textContent = customBullets;
+  validateCustom();
+}
+
+function setDescription(val) {
+  customDescription = val;
+  document.getElementById('toggle-yes').classList.toggle('selected', val);
+  document.getElementById('toggle-no').classList.toggle('selected', !val);
+}
+
+function validateCustom() {
+  const name = document.getElementById('custom-retailer-name').value.trim();
+  document.getElementById('custom-next-btn').disabled = !name;
+}
+
+function handleRetailerNext() {
+  if (state.retailer === 'Custom') {
+    goToPage('page-custom', 1);
+  } else {
+    goToUpload();
+  }
+}
+
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) processFile(file);
+}
+
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+
+function processFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => setFileData(results.data, file.name),
+    });
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws);
+      setFileData(data, file.name);
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    showToast('Please upload a CSV or Excel file.', 'error');
+  }
+}
+
+function setFileData(data, fileName) {
+  state.rawData = data;
+  document.getElementById('file-name-display').textContent = fileName;
+  document.getElementById('file-rows-display').textContent = `${data.length} rows detected`;
+  document.getElementById('upload-status').classList.add('visible');
+  document.getElementById('upload-next-btn').disabled = false;
+  showToast(`${data.length} rows loaded successfully`, 'success');
+}
+
+function removeFile() {
+  state.rawData = [];
+  document.getElementById('upload-status').classList.remove('visible');
+  document.getElementById('upload-next-btn').disabled = true;
+  document.getElementById('file-input').value = '';
+}
+
+// ============================================================
+// PROCESSING — calls Claude API
+// ============================================================
+async function startProcessing() {
+  goToPage('page-processing', 3);
+  const log = document.getElementById('processing-log');
+  const statusText = document.getElementById('processing-status-text');
+  const progressBar = document.getElementById('progress-bar');
+
+  function addLog(msg, type = '') {
+    const now = new Date();
+    const t = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+    const line = document.createElement('div');
+    line.className = `log-line ${type}`;
+    line.innerHTML = `<span class="log-time">${t}</span><span class="log-msg">${msg}</span>`;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setProgress(pct, msg) {
+    progressBar.style.width = pct + '%';
+    statusText.textContent = msg;
+  }
+
+  addLog('Starting Groupify AI engine...', 'info');
+  setProgress(5, 'Preparing product data');
+
+  // Build prompt
+  const rows = state.rawData;
+  const bc = state.bulletCount;
+
+  // Prepare compact product list for AI
+  const products = rows.map((row, idx) => {
+    const asin = row.item_id || row.ASIN || row.asin || '';
+    const title = row.title || row.Title || '';
+    let bullets = [];
+    for (let i = 1; i <= bc; i++) {
+      const b = row[`bullet_${i}`] || row[`Bullet_${i}`] || row[`Bullet ${i}`] || '';
+      if (b) bullets.push(b);
+    }
+    const desc = row.description || row.Description || '';
+    const color = row.color || row.Color || '';
+    const size = row.size || row.Size || '';
+    const brand = row.brand || row.Brand || '';
+    const model = row.model || row.Model || '';
+    return { idx, asin, title, bullets, desc, color, size, brand, model };
+  });
+
+  addLog(`Loaded ${products.length} products`, 'info');
+  setProgress(15, 'Sending to AI for analysis');
+
+  const BATCH_SIZE = 50;
+  const batches = [];
+  for (let i = 0; i < products.length; i += BATCH_SIZE) {
+    batches.push(products.slice(i, i + BATCH_SIZE));
+  }
+
+  addLog('Calling Claude AI in ' + batches.length + ' batch' + (batches.length > 1 ? 'es' : '') + '...', 'info');
+  setProgress(25, 'AI analyzing size and color variants');
+
+  let aiResult = { groups: [], ungrouped: [], extracted: {} };
+
+  try {
+    // Run all batches in parallel
+    const batchPromises = batches.map((batch, batchIdx) => {
+      const productLines = batch.map(p => '[' + p.idx + '] ' + p.title).join('\n');
+      const batchPrompt = 'Product grouping task. From each title, extract size and color, then group items that are the SAME product in different sizes or colors ONLY. Do NOT group different products together.\n\nPRODUCTS:\n' + productLines + '\n\nReply ONLY with compact JSON, no markdown, no explanation:\n{"groups":[{"name":"short name","reason":"Size variants: 4oz,8oz","items":[0,2]}],"ungrouped":[3,7],"extracted":{"0":{"size":"4oz","color":""},"2":{"size":"8oz","color":""}}}';
+
+      return fetch('/api/group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: batchPrompt }),
+      }).then(r => {
+        addLog('Batch ' + (batchIdx + 1) + ' of ' + batches.length + ' complete', 'info');
+        setProgress(25 + Math.round(((batchIdx + 1) / batches.length) * 45), 'Processing batch ' + (batchIdx + 1) + ' of ' + batches.length);
+        return r.json();
+      });
+    });
+
+    const batchResults = await Promise.all(batchPromises);
+    addLog('All batches received', 'success');
+
+    // Merge results — rebase group IDs to avoid collisions
+    let groupIdOffset = 0;
+    batchResults.forEach((data, batchIdx) => {
+      try {
+        const text = data.content.map(c => c.text || '').join('');
+        const clean = text.replace(/```json|```/g, '').trim();
+        const result = JSON.parse(clean);
+
+        // Merge extracted
+        Object.assign(aiResult.extracted, result.extracted || {});
+
+        // Merge ungrouped
+        (result.ungrouped || []).forEach(idx => aiResult.ungrouped.push(idx));
+
+        // Merge groups with offset IDs to avoid collisions
+        (result.groups || []).forEach(g => {
+          aiResult.groups.push({
+            name: g.name,
+            reason: g.reason,
+            items: g.items
+          });
+        });
+
+        groupIdOffset += (result.groups || []).length;
+      } catch (e) {
+        addLog('Batch ' + (batchIdx + 1) + ' parse error — skipping', 'warn');
+        // Add batch items as ungrouped fallback
+        batches[batchIdx].forEach(p => aiResult.ungrouped.push(p.idx));
+      }
+    });
+
+    addLog('Identified ' + aiResult.groups.length + ' groups across ' + batches.length + ' batches', 'success');
+
+  } catch (err) {
+    addLog('Error: ' + err.message + ' — using fallback grouping', 'warn');
+    aiResult = {
+      groups: products.map((p, i) => ({ name: p.title.slice(0, 40) || 'Product ' + (i+1), reason: 'No variants detected', items: [p.idx] })),
+      ungrouped: [],
+      extracted: {}
+    };
+  }
+
+  setProgress(85, 'Building review interface');
+  addLog('Calculating content similarity scores...', 'info');
+
+  // Build state.groups
+  state.groups = aiResult.groups.map((g, gIdx) => ({
+    id: gIdx + 1,
+    name: g.name,
+    reason: g.reason,
+    items: g.items.map(itemIdx => {
+      const p = products[itemIdx];
+      const extr = (aiResult.extracted || {})[itemIdx] || {};
+      return {
+        ...p,
+        extractedSize: extr.size || p.size || '',
+        extractedColor: extr.color || p.color || '',
+        groupId: gIdx + 1,
+      };
+    })
+  }));
+
+  state.ungrouped = (aiResult.ungrouped || []).map(itemIdx => {
+    const p = products[itemIdx];
+    return { ...p, groupId: null };
+  });
+
+  // Compute content check %
+  computeContentCheck();
+
+  setProgress(100, 'Done!');
+  addLog('Grouping complete! Redirecting to review...', 'success');
+
+  setTimeout(() => {
+    buildReviewPage();
+    goToPage('page-review', 4);
+  }, 1000);
+}
+
+// ============================================================
+// CONTENT CHECK %
+// ============================================================
+function computeContentCheck() {
+  state.groups.forEach(group => {
+    if (group.items.length <= 1) {
+      group.items.forEach(item => item.contentCheck = null);
+      return;
+    }
+    group.items.forEach(item => {
+      const myWords = getWords(getCombinedContent(item));
+      const otherWords = new Set();
+      group.items.filter(o => o.asin !== item.asin).forEach(o => {
+        getWords(getCombinedContent(o)).forEach(w => otherWords.add(w));
+      });
+      const allWords = new Set([...myWords, ...otherWords]);
+      const overlap = [...myWords].filter(w => otherWords.has(w)).length;
+      item.contentCheck = allWords.size > 0 ? Math.round((overlap / allWords.size) * 100) : 0;
+    });
+  });
+}
+
+function getCombinedContent(item) {
+  return [...(item.bullets || []), item.desc || ''].join(' ');
+}
+
+function getWords(text) {
+  return new Set(text.toLowerCase().replace(/[^a-z ]/g, '').split(' ').filter(Boolean));
+}
+
+// ============================================================
+// REVIEW PAGE
+// ============================================================
+function buildReviewPage() {
+  const container = document.getElementById('groups-container');
+  container.innerHTML = '';
+
+  // Remove empty groups (only those with no items and not freshly created)
+  state.groups = state.groups.filter(g => g.items.length > 0);
+
+  // Move any ungrouped items into their own solo groups
+  while (state.ungrouped.length > 0) {
+    const item = state.ungrouped.shift();
+    const newId = state.groups.length > 0 ? Math.max(...state.groups.map(g => g.id)) + 1 : 1;
+    item.groupId = newId;
+    state.groups.push({ id: newId, name: autoGroupName([item]), reason: 'Solo item', items: [item] });
+  }
+
+  // Stats
+  const totalItems = state.groups.reduce((s, g) => s + g.items.length, 0);
+  document.getElementById('stat-groups').textContent = state.groups.length;
+  document.getElementById('stat-items').textContent = totalItems;
+
+  // Show FAB
+  document.getElementById('fab-new-group').style.display = 'flex';
+
+  // Render groups
+  state.groups.forEach((group, index) => {
+    container.appendChild(buildGroupCard(group, index + 1));
+  });
+
+  initDragDrop();
+}
+
+function autoGroupName(items) {
+  if (!items || items.length === 0) return 'New Group';
+  const title = items[0].title || '';
+  const cleaned = title.replace(/,?\s*([\d.]+\s*(oz|fl oz|lb|ml|g|ct|count|pack|pk|piece|pc|set).*)/gi, '').trim();
+  return cleaned.length > 45 ? cleaned.slice(0, 45).trim() + '…' : cleaned || 'New Group';
+}
+
+function buildGroupCard(group, displayNum) {
+  const card = document.createElement('div');
+  card.className = 'group-card';
+  card.dataset.groupId = group.id;
+
+  const parentAsin = group.items.length > 0 ? group.items[0].asin : '—';
+
+  const itemsHTML = group.items.map((item, idx) => buildProductItemHTML(item, idx === 0, group.id)).join('');
+
+  card.innerHTML = `
+    <div class="group-header" onclick="toggleGroup(this)">
+      <div class="group-num">G${displayNum}</div>
+      <div class="group-name">${group.name}</div>
+      <div class="group-parent-asin">
+        <span class="group-parent-label">Parent</span>
+        <span class="group-parent-val">${parentAsin}</span>
+      </div>
+      <div class="group-meta">
+        <div class="group-count">${group.items.length} item${group.items.length !== 1 ? 's' : ''}</div>
+        ${group.reason ? '<div class="group-reason">' + group.reason + '</div>' : ''}
+      </div>
+      <div class="icon-btn danger" title="Delete group" onclick="event.stopPropagation(); deleteGroup(${group.id})">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v9h6V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="group-toggle">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="group-items" data-group-id="${group.id}">
+      ${itemsHTML}
+    </div>
+  `;
+
+  return card;
+}
+
+function buildProductItemHTML(item, isParent, groupId) {
+  const checkPct = item.contentCheck;
+  let checkClass = '', checkDisplay = '—';
+  if (checkPct !== null && checkPct !== undefined) {
+    checkDisplay = checkPct + '%';
+    checkClass = checkPct >= 90 ? 'high' : checkPct >= 70 ? 'mid' : 'low';
+  }
+
+  const hasSize = item.extractedSize && item.extractedSize.trim();
+  const hasColor = item.extractedColor && item.extractedColor.trim();
+
+  return `
+    <div class="product-item ${isParent ? 'is-parent' : ''}" 
+         data-asin="${item.asin}" 
+         data-group-id="${groupId}"
+         draggable="true">
+      <div class="drag-handle">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 4a1 1 0 100-2 1 1 0 000 2zM10 4a1 1 0 100-2 1 1 0 000 2zM6 9a1 1 0 100-2 1 1 0 000 2zM10 9a1 1 0 100-2 1 1 0 000 2zM6 14a1 1 0 100-2 1 1 0 000 2zM10 14a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/></svg>
+      </div>
+
+      <!-- CONTENT MATCH — left side -->
+      <div class="content-check-left">
+        <div class="check-pct ${checkClass}">${checkDisplay}</div>
+        <div class="check-label">Match</div>
+      </div>
+
+      <div class="product-img-placeholder">📦</div>
+
+      <!-- MAIN INFO -->
+      <div class="product-info">
+        <div class="product-asin">
+          ${item.asin}
+          ${isParent ? '<span class="parent-badge">Parent</span>' : ''}
+        </div>
+        <div class="product-title">${item.title || 'No title'}</div>
+        <div class="product-tags">
+          ${hasSize ? '<span class="tag tag-size">Size: ' + item.extractedSize + '</span>' : '<span class="tag tag-none">No size detected</span>'}
+          ${hasColor ? '<span class="tag tag-color">Color: ' + item.extractedColor + '</span>' : ''}
+        </div>
+      </div>
+
+      <div class="item-actions">
+        <div class="icon-btn" title="Move to group" onclick="openMoveModal('${item.asin}', ${groupId})">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M10 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="icon-btn danger" title="Remove from group" onclick="removeFromGroup('${item.asin}', ${groupId})">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildUngroupedSection() {
+  const section = document.createElement('div');
+  section.className = 'ungrouped-section';
+  section.innerHTML = `
+    <div class="ungrouped-header">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v4M8 10v4M2 8h4M10 8h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Ungrouped (${state.ungrouped.length})
+    </div>
+    <div class="group-items" data-group-id="ungrouped">
+      ${state.ungrouped.map(item => buildProductItemHTML(item, false, 'ungrouped')).join('')}
+    </div>
+  `;
+  return section;
+}
+
+function toggleGroup(header) {
+  header.closest('.group-card').classList.toggle('collapsed');
+}
+
+// ============================================================
+// DRAG & DROP
+// ============================================================
+function initDragDrop() {
+  let draggedAsin = null;
+  let draggedFromGroup = null;
+  let draggedEl = null;
+  const fab = document.getElementById('fab-new-group');
+
+  document.addEventListener('dragstart', e => {
+    const item = e.target.closest('.product-item');
+    if (!item) return;
+    draggedEl = item;
+    draggedAsin = item.dataset.asin;
+    draggedFromGroup = item.dataset.groupId;
+    setTimeout(() => item.classList.add('dragging'), 0);
+    fab.classList.add('fab-droppable');
+  });
+
+  document.addEventListener('dragend', e => {
+    if (draggedEl) draggedEl.classList.remove('dragging');
+    document.querySelectorAll('.group-card').forEach(c => c.classList.remove('drag-over'));
+    document.querySelectorAll('.drop-indicator').forEach(d => d.remove());
+    fab.classList.remove('fab-droppable', 'fab-active');
+    draggedEl = null;
+    draggedAsin = null;
+    draggedFromGroup = null;
+  });
+
+  document.addEventListener('dragover', e => {
+    e.preventDefault();
+    const overFab = e.target.closest('#fab-new-group');
+    const overItem = e.target.closest('.product-item');
+    const groupCard = e.target.closest('.group-card');
+
+    // Clear all indicators
+    document.querySelectorAll('.group-card').forEach(c => c.classList.remove('drag-over'));
+    document.querySelectorAll('.drop-indicator').forEach(d => d.remove());
+    fab.classList.remove('fab-active');
+
+    if (overFab) {
+      fab.classList.add('fab-active');
+      return;
+    }
+
+    if (!groupCard) return;
+    const targetGroupId = parseInt(groupCard.dataset.groupId);
+    const fromGroupId = parseInt(draggedFromGroup);
+
+    if (targetGroupId === fromGroupId && overItem && overItem.dataset.asin !== draggedAsin) {
+      // Intra-group: show drop indicator above or below the hovered item
+      const rect = overItem.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      const indicator = document.createElement('div');
+      indicator.className = 'drop-indicator';
+      if (e.clientY < midpoint) {
+        overItem.parentNode.insertBefore(indicator, overItem);
+      } else {
+        overItem.parentNode.insertBefore(indicator, overItem.nextSibling);
+      }
+    } else if (targetGroupId !== fromGroupId) {
+      groupCard.classList.add('drag-over');
+    }
+  });
+
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!draggedAsin) return;
+
+    const overFab = e.target.closest('#fab-new-group');
+    const overItem = e.target.closest('.product-item');
+    const groupCard = e.target.closest('.group-card');
+
+    document.querySelectorAll('.drop-indicator').forEach(d => d.remove());
+
+    if (overFab) {
+      const newId = state.groups.length > 0 ? Math.max(...state.groups.map(g => g.id)) + 1 : 1;
+      state.groups.push({ id: newId, name: 'New Group', reason: 'Manually created', items: [] });
+      moveItem(draggedAsin, parseInt(draggedFromGroup), newId);
+      return;
+    }
+
+    if (!groupCard) return;
+    const targetGroupId = parseInt(groupCard.dataset.groupId);
+    const fromGroupId = parseInt(draggedFromGroup);
+
+    if (targetGroupId === fromGroupId && overItem && overItem.dataset.asin !== draggedAsin) {
+      // Intra-group reorder
+      const group = state.groups.find(g => g.id === fromGroupId);
+      if (!group) return;
+      const fromIdx = group.items.findIndex(i => i.asin === draggedAsin);
+      let toIdx = group.items.findIndex(i => i.asin === overItem.dataset.asin);
+      if (fromIdx === -1 || toIdx === -1) return;
+
+      const rect = overItem.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      if (e.clientY >= midpoint) toIdx += 1;
+      if (toIdx > fromIdx) toIdx -= 1;
+
+      const [moved] = group.items.splice(fromIdx, 1);
+      group.items.splice(toIdx, 0, moved);
+      group.name = autoGroupName(group.items);
+
+      computeContentCheck();
+      if (sortedAZ) {
+        state.groups.sort((a, b) => {
+          const titleA = (a.items[0] && a.items[0].title || '').toLowerCase();
+          const titleB = (b.items[0] && b.items[0].title || '').toLowerCase();
+          return titleA.localeCompare(titleB);
+        });
+      }
+      buildReviewPage();
+    } else if (targetGroupId !== fromGroupId) {
+      moveItem(draggedAsin, fromGroupId, targetGroupId);
+    }
+  });
+}
+
+function moveItem(asin, fromGroupId, toGroupId) {
+  let item = null;
+
+  // Pull item from source group
+  const fromGroup = state.groups.find(g => g.id === fromGroupId);
+  if (!fromGroup) return;
+  const idx = fromGroup.items.findIndex(i => i.asin === asin);
+  if (idx === -1) return;
+  item = fromGroup.items.splice(idx, 1)[0];
+
+  // If source group is now empty, remove it
+  if (fromGroup.items.length === 0) {
+    state.groups = state.groups.filter(g => g.id !== fromGroupId);
+  } else {
+    // Auto-rename source group from new first item
+    fromGroup.name = autoGroupName(fromGroup.items);
+  }
+
+  // Place item in target group
+  const toGroup = state.groups.find(g => g.id === toGroupId);
+  if (!toGroup) return;
+  item.groupId = toGroupId;
+  toGroup.items.push(item);
+  toGroup.pending = false; // clear pending once it has an item
+
+  // Auto-rename target group from first item
+  toGroup.name = autoGroupName(toGroup.items);
+
+  computeContentCheck();
+  if (sortedAZ) {
+    state.groups.sort((a, b) => {
+      const titleA = (a.items[0] && a.items[0].title || '').toLowerCase();
+      const titleB = (b.items[0] && b.items[0].title || '').toLowerCase();
+      return titleA.localeCompare(titleB);
+    });
+  }
+  buildReviewPage();
+}
+
+// ============================================================
+// MOVE MODAL
+// ============================================================
+function openMoveModal(asin, fromGroupId) {
+  state.movingItem = asin;
+  state.movingFromGroup = fromGroupId;
+
+  const select = document.getElementById('move-group-select');
+  select.innerHTML = '';
+
+  state.groups.forEach(g => {
+    if (g.id !== fromGroupId) {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = `Group ${g.id} — ${g.name}`;
+      select.appendChild(opt);
+    }
+  });
+
+  // Option to move to a brand new solo group
+  const newOpt = document.createElement('option');
+  newOpt.value = 'new';
+  newOpt.textContent = '+ Create new solo group';
+  select.appendChild(newOpt);
+
+  document.getElementById('move-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('move-modal').classList.remove('open');
+  state.movingItem = null;
+  state.movingFromGroup = null;
+}
+
+function confirmMove() {
+  const val = document.getElementById('move-group-select').value;
+  if (val === 'new') {
+    const newId = state.groups.length > 0 ? Math.max(...state.groups.map(g => g.id)) + 1 : 1;
+    state.groups.push({ id: newId, name: 'New Group', reason: 'Manually created', items: [] });
+    moveItem(state.movingItem, state.movingFromGroup, newId);
+  } else {
+    moveItem(state.movingItem, state.movingFromGroup, parseInt(val));
+  }
+  closeModal();
+}
+
+function removeFromGroup(asin, groupId) {
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return;
+
+  group.items = group.items.filter(i => i.asin !== asin);
+
+  if (group.items.length === 0) {
+    state.groups = state.groups.filter(g => g.id !== groupId);
+  } else {
+    group.name = autoGroupName(group.items);
+  }
+
+  computeContentCheck();
+  buildReviewPage();
+}
+
+// ============================================================
+// SORT A-Z
+// ============================================================
+let sortedAZ = false;
+let originalGroupOrder = null;
+
+function toggleSortAZ() {
+  const btn = document.getElementById('sort-az-btn');
+  if (!sortedAZ) {
+    // Save original order
+    originalGroupOrder = state.groups.map(g => g.id);
+    // Sort groups by first item title A-Z
+    state.groups.sort((a, b) => {
+      const titleA = (a.items[0] && a.items[0].title || '').toLowerCase();
+      const titleB = (b.items[0] && b.items[0].title || '').toLowerCase();
+      return titleA.localeCompare(titleB);
+    });
+    sortedAZ = true;
+    btn.style.borderColor = 'var(--orange)';
+    btn.style.color = 'var(--orange)';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h8M2 8h5M2 12h3M11 6v7M9 11l2 2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Title A–Z ✓';
+    showToast('Groups sorted by title A–Z', 'success');
+  } else {
+    // Restore original order
+    if (originalGroupOrder) {
+      state.groups.sort((a, b) => originalGroupOrder.indexOf(a.id) - originalGroupOrder.indexOf(b.id));
+    }
+    sortedAZ = false;
+    originalGroupOrder = null;
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h8M2 8h5M2 12h3M11 6v7M9 11l2 2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Sort by Title';
+    showToast('Restored original order', 'success');
+  }
+  buildReviewPage();
+}
+
+// ============================================================
+// ADD NEW GROUP
+// ============================================================
+function addNewGroup() {
+  // Groups are created by dragging items onto the FAB
+}
+
+function deleteGroup(groupId) {
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return;
+  const itemCount = group.items.length;
+
+  // Push items to ungrouped — buildReviewPage will create solo groups
+  group.items.forEach(item => {
+    item.groupId = null;
+    state.ungrouped.push(item);
+  });
+
+  // Remove the original group
+  state.groups = state.groups.filter(g => g.id !== groupId);
+
+  computeContentCheck();
+  buildReviewPage();
+  showToast('Group deleted — ' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + ' dispersed', 'success');
+}
+
+// ============================================================
+// EXPORT CSV
+// ============================================================
+function exportCSV() {
+  const bc = state.bulletCount;
+  let headers = ['group', 'parent_item_id', 'item_id', 'title'];
+  for (let i = 1; i <= bc; i++) headers.push(`bullet_${i}`);
+  headers.push('description', 'hidden', 'special_features', 'brand', 'color', 'size', 'model', 'content_check_pct');
+
+  const rows = [headers];
+
+  state.groups.forEach(group => {
+    const parentAsin = group.items.length > 0 ? group.items[0].asin : '';
+    group.items.forEach(item => {
+      const row = [
+        group.id,
+        parentAsin,
+        item.asin,
+        item.title,
+      ];
+      for (let i = 0; i < bc; i++) {
+        row.push(item.bullets[i] || '');
+      }
+      row.push(
+        item.desc || '',
+        '', // hidden
+        '', // special_features
+        item.brand || '',
+        item.extractedColor || item.color || '',
+        item.extractedSize || item.size || '',
+        item.model || '',
+        item.contentCheck !== null && item.contentCheck !== undefined ? item.contentCheck + '%' : ''
+      );
+      rows.push(row);
+    });
+  });
+
+  // Ungrouped at the end
+  state.ungrouped.forEach(item => {
+    const row = ['', '', item.asin, item.title];
+    for (let i = 0; i < bc; i++) row.push(item.bullets[i] || '');
+    row.push(item.desc || '', '', '', item.brand || '', item.color || '', item.size || '', item.model || '', '');
+    rows.push(row);
+  });
+
+  const csv = rows.map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `groupify-output-${state.retailer.toLowerCase()}-${Date.now()}.csv`;
+  a.click();
+  showToast('CSV exported successfully!', 'success');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type = '') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    ${type === 'success' ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+    ${type === 'error' ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 5v4M8 11v1" stroke="#ff5c5c" stroke-width="1.5" stroke-linecap="round"/></svg>' : ''}
+    ${msg}
+  `;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+</script>
+</body>
+</html>
