@@ -2117,7 +2117,16 @@ function buildProductItemHTML(item, isParent, groupId) {
       </div>
 
       <!-- IMAGE -->
-      ${item.asin ? `<img
+      ${item.asin && state.retailer === 'Amazon' ? `<a href="https://www.amazon.com/dp/${item.asin}" target="_blank" rel="noopener" draggable="false" onclick="event.stopPropagation()" style="flex-shrink:0;display:block;">
+        <img
+          class="product-img"
+          src="https://images-na.ssl-images-amazon.com/images/P/${item.asin}.01.LZZZZZZZ.jpg"
+          alt=""
+          draggable="false"
+          onerror="this.style.visibility='hidden'"
+          style="cursor:pointer;"
+        />
+      </a>` : item.asin ? `<img
         class="product-img"
         src="https://images-na.ssl-images-amazon.com/images/P/${item.asin}.01.LZZZZZZZ.jpg"
         alt=""
@@ -2541,7 +2550,7 @@ function exportOverride() {
   const bc = Math.max(state.bulletCount, ...state.groups.flatMap(g => g.items).concat(state.ungrouped).map(item => (item.bullets || []).length));
   const headers = ['item_id', 'title'];
   for (let i = 1; i <= bc; i++) headers.push(`bullet_${i}`);
-  headers.push('description', 'hidden', 'special_features', 'brand', 'color', 'size', 'url', 'image_url', 'model', 'parent_item_id');
+  headers.push('description', 'hidden', 'special_features', 'brand', 'color', 'size', 'model', 'parent_item_id');
 
   const rows = [headers];
 
@@ -2567,8 +2576,6 @@ function exportOverride() {
       item.brand || '',
       item.extractedColor || item.color || '',
       item.extractedSize || item.size || '',
-      isAmazon && item.asin ? `https://www.amazon.com/dp/${item.asin}` : '',
-      isAmazon && item.asin ? `https://images-na.ssl-images-amazon.com/images/P/${item.asin}.01.LZZZZZZZ.jpg` : '',
       item.model || '',
       parentId || ''
     );
