@@ -1640,7 +1640,7 @@ async function startProcessing() {
   // Sort by title so variants land in the same batch
   products.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
 
-  const BATCH_SIZE = 50;
+  const BATCH_SIZE = 100;
   const batches = [];
   for (let i = 0; i < products.length; i += BATCH_SIZE) {
     batches.push(products.slice(i, i + BATCH_SIZE));
