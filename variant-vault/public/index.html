@@ -423,7 +423,7 @@
     height: 60px;
     top: 10px;
     left: 10px;
-    border-top-color: var(--accent2);
+    border-top-color: var(--orange);
     animation-duration: 0.7s;
     animation-direction: reverse;
   }
@@ -450,7 +450,7 @@
     border-radius: var(--radius);
     padding: 20px;
     text-align: left;
-    max-height: 240px;
+    max-height: 300px;
     overflow-y: auto;
     font-family: 'DM Mono', monospace;
     font-size: 0.78rem;
@@ -463,6 +463,87 @@
   .log-line.success .log-msg { color: var(--success); }
   .log-line.info .log-msg { color: var(--accent2); }
   .log-line.warn .log-msg { color: var(--warning); }
+
+  .processing-info-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 24px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .processing-info-btn:hover {
+    border-color: var(--muted);
+    color: var(--text);
+  }
+
+  .processing-log-panel {
+    display: none;
+    margin-top: 12px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .processing-log-panel.visible {
+    display: block;
+  }
+
+  .proc-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 0.88rem;
+    color: var(--muted);
+    transition: var(--transition);
+  }
+
+  .proc-step.active {
+    border-color: var(--accent);
+    color: var(--text);
+    background: rgba(59,130,246,0.06);
+  }
+
+  .proc-step.done {
+    border-color: rgba(34,197,94,0.3);
+    color: var(--success);
+    background: rgba(34,197,94,0.05);
+  }
+
+  .proc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: var(--transition);
+  }
+
+  .proc-step.active .proc-dot {
+    background: var(--accent);
+    box-shadow: 0 0 6px rgba(59,130,246,0.5);
+    animation: pulse-dot 1.2s ease-in-out infinite;
+  }
+
+  .proc-step.done .proc-dot {
+    background: var(--success);
+    box-shadow: none;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.75); }
+  }
 
   /* ===================== PAGE 4: REVIEW ===================== */
   #page-review {
@@ -1185,7 +1266,6 @@
     <p class="page-sub">Choose the retailer you're preparing content for. This determines the template format and number of bullet points.</p>
   </div>
 
-  <div class="retailer-group-label">Standard format — 5 bullets + description</div>
   <div class="retailer-grid" style="margin-bottom:8px;">
     <div class="retailer-card" data-retailer="Amazon" data-bullets="5" onclick="selectRetailer(this)">
       <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -1217,16 +1297,6 @@
       <div class="retailer-name">Costco</div>
       <div class="retailer-bullets">5 bullets + description</div>
     </div>
-    <div class="retailer-card" data-retailer="Other" data-bullets="5" onclick="selectRetailer(this)">
-      <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div class="retailer-icon">🏬</div>
-      <div class="retailer-name">Other</div>
-      <div class="retailer-bullets">5 bullets + description</div>
-    </div>
-  </div>
-
-  <div class="retailer-group-label" style="margin-top:24px;">Custom format</div>
-  <div class="retailer-grid" style="grid-template-columns: repeat(2, 1fr); max-width: 340px;">
     <div class="retailer-card retailer-card-custom" data-retailer="Custom" data-bullets="0" onclick="selectRetailer(this)">
       <div class="retailer-check"><svg viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div class="retailer-icon">⚙️</div>
@@ -1294,10 +1364,20 @@
       <h3>📄 Download Template</h3>
       <p id="template-desc">CSV template for your selected retailer with the correct column structure.</p>
     </div>
-    <button class="btn btn-orange btn-sm" onclick="downloadTemplate()">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Download Template
-    </button>
+    <div style="display:flex; align-items:center; gap:16px; flex-shrink:0;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+        <div style="font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted);">Bullets</div>
+        <div class="bullet-picker" style="width:120px;">
+          <button class="bullet-btn" onclick="adjustTemplateBullets(-1)">−</button>
+          <div class="bullet-count" id="template-bullet-display">5</div>
+          <button class="bullet-btn" onclick="adjustTemplateBullets(1)">+</button>
+        </div>
+      </div>
+      <button class="btn btn-orange btn-sm" onclick="downloadTemplate()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download Template
+      </button>
+    </div>
   </div>
 
   <div class="upload-zone" id="upload-zone">
@@ -1336,12 +1416,39 @@
     <div class="processing-ring"></div>
   </div>
   <h2 class="processing-title">Analyzing products…</h2>
-  <p class="processing-status" id="processing-status-text">Initializing AI engine</p>
+  <p class="processing-status" id="processing-status-text">Getting ready</p>
   <div class="progress-bar-wrap">
     <div class="progress-bar-fill" id="progress-bar"></div>
   </div>
-  <br>
-  <div class="processing-log" id="processing-log"></div>
+
+  <!-- User-friendly step list -->
+  <div id="processing-steps" style="margin-top:32px; display:flex; flex-direction:column; gap:10px; text-align:left;">
+    <div class="proc-step" id="step-load">
+      <span class="proc-dot"></span>
+      <span class="proc-label">Loading your products</span>
+    </div>
+    <div class="proc-step" id="step-similarity">
+      <span class="proc-dot"></span>
+      <span class="proc-label">Calculating content similarity</span>
+    </div>
+    <div class="proc-step" id="step-ai">
+      <span class="proc-dot"></span>
+      <span class="proc-label">AI grouping analysis</span>
+    </div>
+    <div class="proc-step" id="step-build">
+      <span class="proc-dot"></span>
+      <span class="proc-label">Building review interface</span>
+    </div>
+  </div>
+
+  <!-- Info button + hidden technical log -->
+  <button class="processing-info-btn" onclick="toggleProcLog()" id="proc-log-btn">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v5M8 5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    View technical log
+  </button>
+  <div class="processing-log-panel" id="processing-log-panel">
+    <div class="processing-log" id="processing-log"></div>
+  </div>
 </div>
 
 <!-- ===================== PAGE 4: REVIEW ===================== -->
@@ -1366,9 +1473,13 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h8M2 8h5M2 12h3M11 6v7M9 11l2 2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Sort by Title
       </button>
+      <button class="btn btn-ghost btn-sm" onclick="exportOverride()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Override File
+      </button>
       <button class="btn btn-orange" onclick="exportCSV()">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Export CSV
+        Groupings File
       </button>
     </div>
   </div>
@@ -1463,15 +1574,27 @@ function goToUpload() {
     state.includeDescription = customDescription;
   }
 
-  const bc = state.bulletCount;
-  document.getElementById('template-desc').textContent =
-    state.retailer + ' template — ' + bc + ' bullet' + (bc > 1 ? 's' : '') + (state.includeDescription !== false ? ' + description' : '');
+  // Sync the bullet picker on the upload page to the current bullet count
+  document.getElementById('template-bullet-display').textContent = state.bulletCount;
+  updateTemplateDesc();
 
   const chip = document.getElementById('nav-retailer-chip');
   chip.innerHTML = '<span class="chip retailer">📦 ' + state.retailer + '</span>';
   chip.style.display = 'block';
 
   goToPage('page-upload', 2);
+}
+
+function adjustTemplateBullets(delta) {
+  state.bulletCount = Math.min(10, Math.max(1, state.bulletCount + delta));
+  document.getElementById('template-bullet-display').textContent = state.bulletCount;
+  updateTemplateDesc();
+}
+
+function updateTemplateDesc() {
+  const bc = state.bulletCount;
+  document.getElementById('template-desc').textContent =
+    state.retailer + ' template — ' + bc + ' bullet' + (bc > 1 ? 's' : '') + (state.includeDescription !== false ? ' + description' : '');
 }
 
 // ============================================================
@@ -1603,13 +1726,34 @@ async function startProcessing() {
     log.scrollTop = log.scrollHeight;
   }
 
+  function setStep(stepId) {
+    ['step-load','step-similarity','step-ai','step-build'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (id === stepId) {
+        el.classList.remove('done');
+        el.classList.add('active');
+      } else if (el.classList.contains('active')) {
+        el.classList.remove('active');
+        el.classList.add('done');
+      }
+    });
+  }
+
   function setProgress(pct, msg) {
     progressBar.style.width = pct + '%';
     statusText.textContent = msg;
   }
 
+  // Reset steps
+  ['step-load','step-similarity','step-ai','step-build'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('active','done'); }
+  });
+
   addLog('Starting Groupify AI engine...', 'info');
-  setProgress(5, 'Preparing product data');
+  setProgress(5, 'Getting ready');
+  setStep('step-load');
 
   // Build prompt
   const rows = state.rawData;
@@ -1633,7 +1777,8 @@ async function startProcessing() {
   });
 
   addLog(`Loaded ${products.length} products`, 'info');
-  setProgress(15, 'Sending to AI for analysis');
+  setProgress(15, `${products.length} products loaded`);
+  setStep('step-similarity');
 
   // Pre-compute pairwise content similarity to pass to AI as a tiebreaker signal
   function getWordsSet(text) {
@@ -1704,10 +1849,15 @@ PRODUCTS:
 ${productLines}
 
 Reply ONLY with compact JSON, no markdown, no explanation:
-{"groups":[{"name":"short product name","reason":"brief variant summary","items":[0,2,5]}],"ungrouped":[3,7],"extracted":{"0":{"size":"1 lb","color":""},"2":{"size":"3 lb","color":""}}}`;
+{"groups":[{"name":"short product name","reason":"brief variant summary","items":[0,2,5]}],"ungrouped":[3,7],"extracted":{"0":{"size":"25 ct, Pack of 2","color":""},"2":{"size":"25 ct","color":""}}}
 
+IMPORTANT for the "extracted" field:
+- "size" must be the FULL size and pack descriptor as it appears in the title — include units, count, and pack info together (e.g. "25 ct", "25 ct, Pack of 2", "5 lb. (2-pack)", "32 fl. oz.", "1.5 cu. ft. (80-Bag Pallet)"). Do not abbreviate or simplify.
+- "color" should be the full color, flavor, or scent descriptor if present, otherwise leave empty.
+- Every product index must appear in either a group or ungrouped, and must have an entry in extracted.`;
   addLog('Calling Claude AI...', 'info');
-  setProgress(25, 'AI analyzing product variants');
+  setProgress(25, 'Sending to AI for analysis');
+  setStep('step-ai');
 
   let aiResult = null;
 
@@ -1736,7 +1886,7 @@ Reply ONLY with compact JSON, no markdown, no explanation:
       throw new Error(data.error?.message || 'API error');
     }
 
-    setProgress(70, 'Processing AI response');
+    setProgress(70, 'Groupings identified');
     const text = data.content.map(c => c.text || '').join('');
     addLog('AI response received', 'success');
 
@@ -1745,7 +1895,6 @@ Reply ONLY with compact JSON, no markdown, no explanation:
     addLog(`Identified ${aiResult.groups.length} groups`, 'success');
   } catch (err) {
     addLog(`Error: ${err.message} — using fallback grouping`, 'warn');
-    // Fallback: each item in its own group
     aiResult = {
       groups: products.map((p, i) => ({ name: p.title.slice(0, 40) || `Product ${i+1}`, reason: 'No variants detected', items: [p.idx] })),
       ungrouped: [],
@@ -1753,8 +1902,32 @@ Reply ONLY with compact JSON, no markdown, no explanation:
     };
   }
 
-  setProgress(85, 'Building review interface');
+  setProgress(85, 'Almost there…');
+  setStep('step-build');
   addLog('Calculating content similarity scores...', 'info');
+
+  // Extract full size + pack descriptor by collecting all consecutive trailing
+  // comma-segments that look like variant info (short + has digit/size word/clothing size).
+  // e.g. "Product, For Outdoor Use, 25 ct, Pack of 2" → "25 ct, Pack of 2"
+  function extractSizeFromTitle(title, fallback) {
+    if (!title) return fallback || '';
+    const segments = title.split(',').map(s => s.trim()).filter(Boolean);
+    if (segments.length < 2) return fallback || '';
+
+    const sizeKeywords = /\b(oz|fl|lb|lbs|g|kg|ml|l|ct|count|pack|pcs?|piece|pieces|tablet|tabs?|caps?|capsule|gal|gallon|ft|cu|sq|pt|qt|mg|mcg|iu|serving|dose|inch|in|cm|mm|xl|xxl|xxxl|xs|small|medium|large|x-large|xx-large|bundle|set|pair|roll|sheet|bag|box|can|jar|bottle|tube|bar|stick|wipe|pad|pod|strip|patch|spray|pump|sachet|pouch)\b/i;
+
+    function isVariant(seg) {
+      const words = seg.split(/\s+/).length;
+      return words <= 8 && (/\d/.test(seg) || sizeKeywords.test(seg) || /^\(?(XS|S|M|L|XL|XXL|XXXL|One Size)\)?$/i.test(seg));
+    }
+
+    const trailing = [];
+    for (let i = segments.length - 1; i >= 1; i--) {
+      if (isVariant(segments[i])) trailing.unshift(segments[i]);
+      else break;
+    }
+    return trailing.length > 0 ? trailing.join(', ') : (fallback || '');
+  }
 
   // Build state.groups
   state.groups = aiResult.groups.map((g, gIdx) => ({
@@ -1766,7 +1939,7 @@ Reply ONLY with compact JSON, no markdown, no explanation:
       const extr = (aiResult.extracted || {})[itemIdx] || {};
       return {
         ...p,
-        extractedSize: extr.size || p.size || '',
+        extractedSize: extractSizeFromTitle(p.title, extr.size || p.size || ''),
         extractedColor: extr.color || p.color || '',
         groupId: gIdx + 1,
       };
@@ -1775,19 +1948,38 @@ Reply ONLY with compact JSON, no markdown, no explanation:
 
   state.ungrouped = (aiResult.ungrouped || []).map(itemIdx => {
     const p = products[itemIdx];
-    return { ...p, groupId: null };
+    const extr = (aiResult.extracted || {})[itemIdx] || {};
+    return {
+      ...p,
+      extractedSize: extractSizeFromTitle(p.title, extr.size || p.size || ''),
+      extractedColor: extr.color || p.color || '',
+      groupId: null
+    };
   });
 
   // Compute content check %
   computeContentCheck();
 
-  setProgress(100, 'Done!');
+  setProgress(100, 'All done!');
   addLog('Grouping complete! Redirecting to review...', 'success');
+
+  // Mark build step done
+  const buildStep = document.getElementById('step-build');
+  if (buildStep) { buildStep.classList.remove('active'); buildStep.classList.add('done'); }
 
   setTimeout(() => {
     buildReviewPage();
     goToPage('page-review', 4);
   }, 1000);
+}
+
+function toggleProcLog() {
+  const panel = document.getElementById('processing-log-panel');
+  const btn = document.getElementById('proc-log-btn');
+  const isVisible = panel.classList.toggle('visible');
+  btn.innerHTML = isVisible
+    ? '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v5M8 5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Hide technical log'
+    : '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7v5M8 5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> View technical log';
 }
 
 // ============================================================
@@ -2148,7 +2340,8 @@ function openMoveModal(asin, fromGroupId) {
     if (g.id !== fromGroupId) {
       const opt = document.createElement('option');
       opt.value = g.id;
-      opt.textContent = `Group ${g.id} — ${g.name}`;
+      const parentAsin = g.items.length > 0 ? g.items[0].asin : '—';
+      opt.textContent = `${parentAsin} — ${g.name}`;
       select.appendChild(opt);
     }
   });
@@ -2289,7 +2482,7 @@ function deleteGroup(groupId) {
 // EXPORT CSV
 // ============================================================
 function exportCSV() {
-  const bc = state.bulletCount;
+  const bc = Math.max(state.bulletCount, ...state.groups.flatMap(g => g.items).concat(state.ungrouped).map(item => (item.bullets || []).length));
   let headers = ['group', 'parent_item_id', 'item_id', 'title'];
   for (let i = 1; i <= bc; i++) headers.push(`bullet_${i}`);
   headers.push('description', 'hidden', 'special_features', 'brand', 'color', 'size', 'model', 'content_check_pct');
@@ -2335,9 +2528,61 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `groupify-output-${state.retailer.toLowerCase()}-${Date.now()}.csv`;
+  a.download = `groupings-${state.retailer.toLowerCase()}-${Date.now()}.csv`;
   a.click();
-  showToast('CSV exported successfully!', 'success');
+  showToast('Groupings file downloaded!', 'success');
+}
+
+// ============================================================
+// EXPORT — OVERRIDE FILE
+// ============================================================
+function exportOverride() {
+  // Use actual max bullets present in the data, not just the retailer setting
+  const bc = Math.max(state.bulletCount, ...state.groups.flatMap(g => g.items).concat(state.ungrouped).map(item => (item.bullets || []).length));
+  const headers = ['item_id', 'title'];
+  for (let i = 1; i <= bc; i++) headers.push(`bullet_${i}`);
+  headers.push('description', 'hidden', 'special_features', 'brand', 'color', 'size', 'url', 'image_url', 'model', 'parent_item_id');
+
+  const rows = [headers];
+
+  const allItems = [];
+  state.groups.forEach(group => {
+    const parentId = group.items.length > 0 ? group.items[0].asin : '';
+    group.items.forEach(item => {
+      allItems.push({ item, parentId });
+    });
+  });
+  state.ungrouped.forEach(item => {
+    allItems.push({ item, parentId: item.asin });
+  });
+
+  allItems.forEach(({ item, parentId }) => {
+    const isAmazon = state.retailer === 'Amazon';
+    const row = [item.asin, item.title];
+    for (let i = 0; i < bc; i++) row.push(item.bullets[i] || '');
+    row.push(
+      item.desc || '',
+      '', // hidden
+      '', // special_features
+      item.brand || '',
+      item.extractedColor || item.color || '',
+      item.extractedSize || item.size || '',
+      isAmazon && item.asin ? `https://www.amazon.com/dp/${item.asin}` : '',
+      isAmazon && item.asin ? `https://images-na.ssl-images-amazon.com/images/P/${item.asin}.01.LZZZZZZZ.jpg` : '',
+      item.model || '',
+      parentId || ''
+    );
+    rows.push(row);
+  });
+
+  const csv = rows.map(r => r.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `override-${state.retailer.toLowerCase()}-${Date.now()}.csv`;
+  a.click();
+  showToast('Override file downloaded!', 'success');
 }
 
 // ============================================================
