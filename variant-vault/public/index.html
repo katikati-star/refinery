@@ -2014,7 +2014,11 @@ async function checkPassword() {
             padding:12px 20px; background:#3b82f6; border:none; border-radius:8px;
             color:#fff; font-family:'DM Sans',sans-serif; font-size:0.85rem;
             font-weight:600; cursor:pointer; white-space:nowrap; transition:background 0.2s;
-          " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">Run</button>
+            display:flex; align-items:center; gap:8px;
+          " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+            <span id="pv-addendum-spinner" style="display:none; width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; animation:spin 0.8s linear infinite; flex-shrink:0;"></span>
+            <span id="pv-addendum-btn-label">Interpret & Add</span>
+          </button>
         </div>
         <div id="pv-addendum-status" style="font-size:0.78rem;color:var(--muted);margin-top:8px;min-height:1.2em;"></div>
       </div>
@@ -2383,7 +2387,7 @@ Reply ONLY with compact JSON, no markdown, no explanation:
 {"groups":[{"name":"short product name","reason":"brief variant summary","items":[0,2,5]}],"ungrouped":[3,7],"extracted":{"0":{"size":"25 ct, Pack of 2","color":""},"2":{"size":"25 ct","color":""}}}
 
 IMPORTANT for the "extracted" field:
-- "size" must be the FULL size and pack descriptor as it appears in the title — include units, count, and pack info together (e.g. "25 ct", "25 ct, Pack of 2", "5 lb. (2-pack)", "32 fl. oz.", "1.5 cu. ft. (80-Bag Pallet)"). Do not abbreviate or simplify.
+- "size" must be ONLY the actual size, quantity, weight, volume, count, or pack descriptor — e.g. "25 ct", "25 ct, Pack of 2", "5 lb. (2-pack)", "32 fl. oz.". Do NOT include marketing phrases, rankings, claims, or origin statements (e.g. do not include "#1 Best Selling", "Made in the USA", "Award Winning", "Doctor Recommended", "Pack of" without a size, or any text that is not a physical measurement or pack count).
 - "color" should be the full color, flavor, or scent descriptor if present, otherwise leave empty.
 - Every product index must appear in either a group or ungrouped, and must have an entry in extracted.`;
   addLog('Calling Claude AI...', 'info');
@@ -3576,19 +3580,29 @@ async function pvRunAddendum() {
 
   const btn = document.getElementById('pv-addendum-btn');
   const status = document.getElementById('pv-addendum-status');
-  btn.disabled = true;
-  btn.textContent = 'Running…';
-  status.textContent = 'Adding to instructions…';
+  const spinner = document.getElementById('pv-addendum-spinner');
+  const label = document.getElementById('pv-addendum-btn-label');
 
-  // Build context from current result
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  label.textContent = 'Running…';
+  status.textContent = '';
+
+  // Build context from CURRENT ON-SCREEN content (respect edits)
   const current = window.pvLastResult;
+  // Sync editable fields back to result before reading
+  document.querySelectorAll('[data-field]').forEach(el => {
+    const key = el.dataset.field;
+    if (key) current[key] = el.innerText.trim();
+  });
+
   const contextLines = Object.entries(current)
     .filter(([k, v]) => v && v !== 'null' && k !== 'awareness_notes')
     .map(([k, v]) => `${k}: ${v}`)
     .join('\n');
   const existingNotes = Array.isArray(current.awareness_notes) ? current.awareness_notes.join('\n') : '';
 
-  const addendumPrompt = `EXISTING INSTRUCTIONS:\n${contextLines}\n\nEXISTING AWARENESS NOTES:\n${existingNotes}\n\nADDITIONAL INPUT TO INCORPORATE:\n${input}`;
+  const addendumPrompt = `EXISTING INSTRUCTIONS:\n${contextLines}\n\nEXISTING AWARENESS NOTES:\n${existingNotes}\n\nADDITIONAL INPUT TO INCORPORATE (only extract NEW rules not already covered above):\n${input}`;
 
   try {
     const response = await fetch('/api/group', {
@@ -3603,7 +3617,7 @@ async function pvRunAddendum() {
     const clean = text.replace(/```json|```/g, '').trim();
     const additions = JSON.parse(clean);
 
-    // Merge additions into existing result
+    // Merge additions — only append genuinely new content
     Object.entries(additions).forEach(([key, val]) => {
       if (!val || val === 'null') return;
       if (key === 'awareness_notes') {
@@ -3611,25 +3625,22 @@ async function pvRunAddendum() {
         if (!Array.isArray(current.awareness_notes)) current.awareness_notes = [];
         current.awareness_notes.push(...newNotes);
       } else {
-        // Append to existing field or set if empty
-        if (current[key] && current[key] !== 'null') {
-          current[key] = current[key] + ' ' + val;
-        } else {
-          current[key] = val;
-        }
-        // Update editable field on screen
+        const existing = current[key] && current[key] !== 'null' ? current[key].trim() : '';
+        // Only append if val is meaningfully different from existing
+        if (existing && existing.toLowerCase().includes(val.toLowerCase().slice(0, 30))) return;
+        current[key] = existing ? existing + ' ' + val : val;
         const el = document.querySelector(`[data-field="${key}"]`);
         if (el) el.innerText = current[key];
       }
     });
 
-    // Re-render awareness notes
-    const additions_notes = Array.isArray(additions.awareness_notes) ? additions.awareness_notes.filter(Boolean) : [];
-    if (additions_notes.length > 0) {
+    // Re-render new awareness notes only
+    const newNotes = Array.isArray(additions.awareness_notes) ? additions.awareness_notes.filter(Boolean) : [];
+    if (newNotes.length > 0) {
       const container = document.getElementById('pv-awareness-output');
       const section = document.getElementById('pv-awareness-section');
       section.style.display = 'block';
-      additions_notes.forEach(note => {
+      newNotes.forEach(note => {
         const boldMatch = note.match(/^\*\*(.+?):\*\*\s*(.*)/s);
         const headline = boldMatch ? boldMatch[1] + ':' : null;
         const body = boldMatch ? boldMatch[2].trim() : note;
@@ -3647,10 +3658,11 @@ async function pvRunAddendum() {
 
   } catch(err) {
     status.textContent = 'Error: ' + err.message;
-    showToast('Failed to run: ' + err.message, 'error');
+    showToast('Failed: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Run';
+    spinner.style.display = 'none';
+    label.textContent = 'Interpret & Add';
   }
 }
 
@@ -3768,9 +3780,6 @@ function pvExportAwarenessPDF() {
     const headline = boldMatch ? boldMatch[1] + ':' : `Note ${i + 1}`;
     const body = boldMatch ? boldMatch[2].trim() : note;
 
-    // Highlight "verify" and action words in body
-    const verifyWords = /\b(verify|confirm|check|flag|review|ensure|do not|must not)\b/gi;
-
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(245, 158, 11);
@@ -3784,24 +3793,20 @@ function pvExportAwarenessPDF() {
     });
     y += headlineLines.length * 15 + 4;
 
-    // Body — render with bold for key action words by splitting on them
+    // Body — render with bold for key action words
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.setTextColor(180, 196, 220);
-    const segments = body.split(verifyWords);
-    const matches = body.match(verifyWords) || [];
-    let fullBody = '';
-    segments.forEach((seg, si) => {
-      fullBody += seg;
-      if (matches[si]) fullBody += matches[si].toUpperCase();
-    });
-    const bodyLines = doc.splitTextToSize(fullBody, contentW - 18);
+    const bodyLines = doc.splitTextToSize(body, contentW - 18);
     bodyLines.forEach(line => {
       y = pvCheckPage(doc, y, pageH, margin, pageW, 15);
-      // Bold the verify keywords inline
-      const parts = line.split(/\b(VERIFY|CONFIRM|CHECK|FLAG|REVIEW|ENSURE|DO NOT|MUST NOT)\b/g);
+      // Split line on action keywords to render them bold
+      const keywordRe = /\b(verify|confirm|check|flag|do not|must not|ensure|review)\b/gi;
+      const parts = line.split(keywordRe);
       let xPos = margin + 18;
       parts.forEach(part => {
-        const isKeyword = /^(VERIFY|CONFIRM|CHECK|FLAG|REVIEW|ENSURE|DO NOT|MUST NOT)$/.test(part);
+        if (!part) return;
+        const isKeyword = keywordRe.test(part);
+        keywordRe.lastIndex = 0; // reset regex
         doc.setFont('helvetica', isKeyword ? 'bold' : 'normal');
         doc.setTextColor(isKeyword ? 240 : 180, isKeyword ? 244 : 196, isKeyword ? 255 : 220);
         doc.text(part, xPos, y);
