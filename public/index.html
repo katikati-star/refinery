@@ -1849,6 +1849,18 @@ async function checkPassword() {
   </div>
 </div>
 
+<!-- BETA RETAILER MODAL -->
+<div class="modal-overlay" id="beta-retailer-modal">
+  <div class="modal">
+    <h3>Beta Retailer</h3>
+    <p><span id="beta-retailer-name" style="color:var(--orange);font-weight:600;"></span> is still being built out. The grouping process will work as normal, but product images and page links won't be available. Do you want to continue?</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeBetaModal()">Go back</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmBetaRetailer()">Continue anyway</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toast-container"></div>
 
@@ -1863,7 +1875,7 @@ async function checkPassword() {
     </div>
 
     <!-- INPUT SECTION -->
-    <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:32px;">
+    <div id="pv-input-section" style="display:flex; flex-direction:column; gap:16px; margin-bottom:32px;">
 
       <!-- File upload -->
       <div id="pv-upload-zone" style="
@@ -1909,7 +1921,7 @@ async function checkPassword() {
         transition:all 0.2s; display:flex; align-items:center; gap:8px;
       " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Interpret Brief
+        Interpret
       </button>
     </div>
 
@@ -1947,19 +1959,19 @@ async function checkPassword() {
         <div style="display:flex; gap:10px;">
           <button onclick="pvExportAwarenessPDF()" style="
             display:flex; align-items:center; gap:7px; padding:10px 20px;
-            background:transparent; border:1.5px solid rgba(245,158,11,0.4); border-radius:8px;
-            color:#f59e0b; font-family:'DM Sans',sans-serif; font-size:0.85rem;
-            font-weight:600; cursor:pointer; transition:all 0.2s;
-          " onmouseover="this.style.background='rgba(245,158,11,0.08)'" onmouseout="this.style.background='transparent'">
+            background:#f97316; border:none; border-radius:8px;
+            color:#fff; font-family:'DM Sans',sans-serif; font-size:0.85rem;
+            font-weight:600; cursor:pointer; transition:background 0.2s; min-width:160px; justify-content:center;
+          " onmouseover="this.style.background='#ea6c0a'" onmouseout="this.style.background='#f97316'">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Awareness Notes
           </button>
           <button onclick="pvExportInstructionsPDF()" style="
             display:flex; align-items:center; gap:7px; padding:10px 20px;
-            background:#3b82f6; border:none; border-radius:8px;
+            background:#f97316; border:none; border-radius:8px;
             color:#fff; font-family:'DM Sans',sans-serif; font-size:0.85rem;
-            font-weight:600; cursor:pointer; transition:background 0.2s;
-          " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+            font-weight:600; cursor:pointer; transition:background 0.2s; min-width:160px; justify-content:center;
+          " onmouseover="this.style.background='#ea6c0a'" onmouseout="this.style.background='#f97316'">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v7M5 7l3 3 3-3M3 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Export Instructions
           </button>
@@ -1974,8 +1986,29 @@ async function checkPassword() {
           <div style="font-family:'DM Serif Display',serif; font-size:1.4rem; color:var(--text);">Awareness Notes</div>
           <div style="font-size:0.72rem; font-family:'DM Mono',monospace; background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.25); padding:2px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.08em;">Human Review</div>
         </div>
-        <div style="font-size:0.82rem; color:var(--muted); margin-bottom:14px;">Things flagged from the brief that AI may handle inconsistently or that require human judgment.</div>
         <div id="pv-awareness-output" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+
+      <!-- Addendum Section -->
+      <div style="margin-top:40px; padding-top:32px; border-top:1px solid var(--border);">
+        <div style="font-family:'DM Serif Display',serif; font-size:1.1rem; color:var(--text); margin-bottom:6px;">Anything missed?</div>
+        <div style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Add extra rules or notes and run them inline — results will be added to the relevant fields above.</div>
+        <div style="display:flex; gap:10px; align-items:flex-start;">
+          <textarea id="pv-addendum-input" placeholder="e.g. Do not use 'granular' for liquid products…" style="
+            flex:1; min-height:80px; padding:12px 14px;
+            background:var(--surface); border:1.5px solid var(--border);
+            border-radius:var(--radius); color:var(--text);
+            font-family:'DM Sans',sans-serif; font-size:0.88rem;
+            line-height:1.6; outline:none; resize:vertical;
+            box-sizing:border-box; transition:border-color 0.2s;
+          " onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='var(--border)'"></textarea>
+          <button onclick="pvRunAddendum()" id="pv-addendum-btn" style="
+            padding:12px 20px; background:#3b82f6; border:none; border-radius:8px;
+            color:#fff; font-family:'DM Sans',sans-serif; font-size:0.85rem;
+            font-weight:600; cursor:pointer; white-space:nowrap; transition:background 0.2s;
+          " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">Run</button>
+        </div>
+        <div id="pv-addendum-status" style="font-size:0.78rem;color:var(--muted);margin-top:8px;min-height:1.2em;"></div>
       </div>
     </div>
 
@@ -2023,12 +2056,36 @@ function goToPage(pageId, stepNum) {
   if (fab) fab.style.display = pageId === 'page-review' ? 'flex' : 'none';
 }
 
+const BETA_RETAILERS = ['Walmart', 'Target', 'Lowes', 'Costco'];
+let pendingBetaCard = null;
+
 function selectRetailer(card) {
+  const retailer = card.dataset.retailer;
+  if (BETA_RETAILERS.includes(retailer)) {
+    pendingBetaCard = card;
+    document.getElementById('beta-retailer-name').textContent = card.querySelector('.retailer-name').textContent;
+    document.getElementById('beta-retailer-modal').classList.add('open');
+    return;
+  }
+  applyRetailerSelection(card);
+}
+
+function applyRetailerSelection(card) {
   document.querySelectorAll('.retailer-card').forEach(c => c.classList.remove('selected'));
   card.classList.add('selected');
   state.retailer = card.dataset.retailer;
   state.bulletCount = parseInt(card.dataset.bullets);
   document.getElementById('retailer-next-btn').disabled = false;
+}
+
+function closeBetaModal() {
+  pendingBetaCard = null;
+  document.getElementById('beta-retailer-modal').classList.remove('open');
+}
+
+function confirmBetaRetailer() {
+  if (pendingBetaCard) applyRetailerSelection(pendingBetaCard);
+  closeBetaModal();
 }
 
 function goToUpload() {
@@ -3317,21 +3374,28 @@ async function pvRunInterpreter() {
   pvLog('Calling Claude AI...', 'info');
   pvSetStep(2);
 
-  const systemPrompt = `You are an expert at interpreting creative briefs and brand guidelines for e-commerce content writing. Your job is to extract clear, structured AI instructions that a content-writing AI can follow without any ambiguity.
+  const systemPrompt = `You are an expert at interpreting creative briefs and brand guidelines for e-commerce content writing. Extract clear, structured AI instructions a content-writing AI can follow without any ambiguity.
 
-CORE RULES FOR WRITING INSTRUCTIONS:
-1. Be conservative — only extract instructions explicitly stated in the input. Do not infer, invent, or fill gaps.
-2. Write every instruction as an unconditional, direct directive. Never use "if", "unless", "when applicable", "if applicable", or any conditional language. Instructions must be absolute rules.
-3. Any rule that requires checking the product label, verifying a claim, or making a product-specific judgment CANNOT be an instruction — move it to awareness_notes instead. The AI has no access to product labels.
-4. Any rule that is a nuanced distinction, an "if X then Y" rule, or requires human judgment goes to awareness_notes only — not instructions.
-5. Write instructions that are self-contained. Do not cross-reference other fields (e.g., do not write "see bullet_1 note").
-6. For nuanced language rules, include concrete examples of what is prohibited and what is acceptable. Format as: "Do not use [prohibited examples]. Instead, frame as [acceptable examples]."
-7. Keep each instruction field focused. If a rule applies to all fields, put it in all_content. If it is specific to a field, put it only there.
-8. For individual bullet fields (bullet_1 through bullet_5): only populate if the brief gives explicit guidance for that specific bullet position. Default bullet count is 5. Only add bullet_6 through bullet_10 if the brief explicitly mentions guidance beyond bullet 5.
+RULES FOR INSTRUCTIONS:
+1. Conservative — only extract what is explicitly stated. Do not infer or fill gaps.
+2. Every instruction is an unconditional directive. Never use "if", "unless", "when applicable", or any conditional. Instructions are absolute rules.
+3. Do not include any explanation of why a rule exists. No "because Amazon...", no "since the label...", no client reasoning. Just the rule.
+4. Any rule requiring label verification, product-type checking, or human judgment goes to awareness_notes only — never in instructions.
+5. Any GEO user descriptor rules (like which user terms are allowed) go to awareness_notes only — the correct term depends on the product.
+6. Fertilizer-related keyword placement rules go to awareness_notes only — whether a product contains fertilizer requires product verification.
+7. Self-contained instructions only — no cross-references between fields.
+8. For nuanced language rules, include concrete examples: "Do not use [X, Y, Z]. Use [A, B] instead."
+9. Bullet fields (bullet_1–5): only populate if the brief gives explicit positional guidance. Add bullet_6–10 only if explicitly mentioned.
 
-AWARENESS NOTES FORMAT:
-Each note must start with a bold headline (using **Bold Text:** format) that captures the core issue in 3-5 words, followed by a colon, then the full explanation. Example: "**Kill vs. Prevent:** 'Kill' and 'Control' are interchangeable but neither can be used interchangeably with 'Prevent'..."
-Notes should cover: label-dependent claims, ambiguous conditionals, nuanced distinctions the AI might get wrong, brand-specific terminology traps, and anything requiring a human to verify against the actual product.
+AWARENESS NOTES RULES:
+- Start each note with **Bold Headline:** in 3–5 words capturing the core issue.
+- State what to watch for directly and clearly. Do not write "A human must..." — just describe the issue and what to look out for.
+- Cover: label-dependent claims, product-type distinctions, nuanced terminology traps, conditionally acceptable phrases, anything the AI might get wrong.
+
+DO NOT SAY / CAN SAY TABLE:
+At the end of awareness_notes, include one entry formatted as a table using this exact structure:
+"**Do Not Say / Can Say:** | Do Not Say | Can Say |\\n|---|---|\\n| [prohibited] | [acceptable] |\\n| [prohibited] | [acceptable] |"
+Extract all clear prohibited/acceptable pairs from the input for this table.
 
 Reply ONLY with valid JSON, no markdown, no explanation:
 {
@@ -3346,8 +3410,11 @@ Reply ONLY with valid JSON, no markdown, no explanation:
   "description": "instruction text or null",
   "hidden": "instruction text or null",
   "keyword_selection": "instruction text or null",
-  "awareness_notes": ["**Headline:** Full explanation here.", "**Headline 2:** Full explanation here."]
+  "awareness_notes": ["**Headline:** Explanation here.", "**Do Not Say / Can Say:** | Do Not Say | Can Say |\\n|---|---|\\n| prohibited | acceptable |"]
 }`;
+
+  // Also store system prompt for addendum runs
+  document.pvAddendumSystemPrompt = systemPrompt;
 
   try {
     const response = await fetch('/api/group', {
@@ -3408,6 +3475,9 @@ function pvToggleLog() {
 
 function pvRenderOutput(result) {
   document.getElementById('pv-loading').style.display = 'none';
+  document.getElementById('pv-input-section').style.display = 'none';
+  document.getElementById('pv-run-btn').style.display = 'none';
+
   const fieldsContainer = document.getElementById('pv-fields-output');
   fieldsContainer.innerHTML = '';
 
@@ -3429,9 +3499,16 @@ function pvRenderOutput(result) {
 
     const el = document.createElement('div');
     el.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;';
+    el.dataset.fieldKey = field.key;
     el.innerHTML = `
       <div style="padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-family:'DM Mono',monospace;">${field.label}</div>
-      <div style="padding:14px 16px;font-size:0.88rem;color:var(--text);line-height:1.6;">${val}</div>
+      <div
+        contenteditable="true"
+        data-field="${field.key}"
+        style="padding:14px 16px;font-size:0.88rem;color:var(--text);line-height:1.6;outline:none;min-height:40px;cursor:text;"
+        onfocus="this.style.background='rgba(59,130,246,0.04)'"
+        onblur="this.style.background='transparent'; pvSyncField(this)"
+      >${val}</div>
     `;
     fieldsContainer.appendChild(el);
   });
@@ -3474,7 +3551,98 @@ function pvRenderOutput(result) {
   window.pvLastFieldsToShow = fieldsToShow;
 
   document.getElementById('pv-output').style.display = 'block';
-  document.getElementById('pv-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function pvSyncField(el) {
+  const key = el.dataset.field;
+  if (key && window.pvLastResult) {
+    window.pvLastResult[key] = el.innerText.trim();
+  }
+}
+
+async function pvRunAddendum() {
+  const input = document.getElementById('pv-addendum-input').value.trim();
+  if (!input) return;
+
+  const btn = document.getElementById('pv-addendum-btn');
+  const status = document.getElementById('pv-addendum-status');
+  btn.disabled = true;
+  btn.textContent = 'Running…';
+  status.textContent = 'Adding to instructions…';
+
+  // Build context from current result
+  const current = window.pvLastResult;
+  const contextLines = Object.entries(current)
+    .filter(([k, v]) => v && v !== 'null' && k !== 'awareness_notes')
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('\n');
+  const existingNotes = Array.isArray(current.awareness_notes) ? current.awareness_notes.join('\n') : '';
+
+  const addendumPrompt = `EXISTING INSTRUCTIONS:\n${contextLines}\n\nEXISTING AWARENESS NOTES:\n${existingNotes}\n\nADDITIONAL INPUT TO INCORPORATE:\n${input}`;
+
+  try {
+    const response = await fetch('/api/group', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: addendumPrompt, system: document.pvAddendumSystemPrompt }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'API error');
+
+    const text = data.content.map(c => c.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const additions = JSON.parse(clean);
+
+    // Merge additions into existing result
+    Object.entries(additions).forEach(([key, val]) => {
+      if (!val || val === 'null') return;
+      if (key === 'awareness_notes') {
+        const newNotes = Array.isArray(val) ? val.filter(Boolean) : [];
+        if (!Array.isArray(current.awareness_notes)) current.awareness_notes = [];
+        current.awareness_notes.push(...newNotes);
+      } else {
+        // Append to existing field or set if empty
+        if (current[key] && current[key] !== 'null') {
+          current[key] = current[key] + ' ' + val;
+        } else {
+          current[key] = val;
+        }
+        // Update editable field on screen
+        const el = document.querySelector(`[data-field="${key}"]`);
+        if (el) el.innerText = current[key];
+      }
+    });
+
+    // Re-render awareness notes
+    const additions_notes = Array.isArray(additions.awareness_notes) ? additions.awareness_notes.filter(Boolean) : [];
+    if (additions_notes.length > 0) {
+      const container = document.getElementById('pv-awareness-output');
+      const section = document.getElementById('pv-awareness-section');
+      section.style.display = 'block';
+      additions_notes.forEach(note => {
+        const boldMatch = note.match(/^\*\*(.+?):\*\*\s*(.*)/s);
+        const headline = boldMatch ? boldMatch[1] + ':' : null;
+        const body = boldMatch ? boldMatch[2].trim() : note;
+        const el = document.createElement('div');
+        el.style.cssText = 'padding:12px 14px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:8px;';
+        el.innerHTML = `<div style="display:flex;gap:10px;align-items:flex-start;"><div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0;margin-top:6px;"></div><div style="font-size:0.85rem;color:var(--text);line-height:1.55;">${headline ? `<span style="font-weight:600;color:#f59e0b;">${headline}</span> ` : ''}${body}</div></div>`;
+        container.appendChild(el);
+      });
+    }
+
+    document.getElementById('pv-addendum-input').value = '';
+    status.textContent = '✓ Added successfully';
+    setTimeout(() => { status.textContent = ''; }, 3000);
+    showToast('Instructions updated', 'success');
+
+  } catch(err) {
+    status.textContent = 'Error: ' + err.message;
+    showToast('Failed to run: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run';
+  }
 }
 
 // ============================================================
@@ -3573,9 +3741,6 @@ function pvExportAwarenessPDF() {
   doc.setFontSize(10);
   doc.setTextColor(107, 127, 168);
   doc.text('Human Review — ' + new Date().toLocaleDateString(), margin, y);
-  y += 10;
-  doc.setFontSize(9);
-  doc.text('Items requiring human judgment or verification before approving AI-generated content.', margin, y);
   y += 28;
   doc.setDrawColor(30, 45, 77);
   doc.line(margin, y, pageW - margin, y);
