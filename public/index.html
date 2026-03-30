@@ -2586,12 +2586,21 @@ IMPORTANT for the "extracted" field:
 
         const chunkResult = await processChunk(chunks[ci], ci * CHUNK_SIZE, ci, chunks.length);
 
-        // Remap group item indices — they're already global (product.idx) so no remapping needed
         mergedGroups.push(...chunkResult.groups);
         mergedUngrouped.push(...(chunkResult.ungrouped || []));
         Object.assign(mergedExtracted, chunkResult.extracted || {});
 
         addLog(`Batch ${ci + 1} done: ${chunkResult.groups.length} groups`, 'success');
+
+        // Rate limit pause between chunks — free tier allows 10k tokens/min
+        if (ci < chunks.length - 1) {
+          addLog('Pausing to respect API rate limits…', 'info');
+          const pauseSecs = 65;
+          for (let s = pauseSecs; s > 0; s--) {
+            setProgress(25 + Math.round(((ci + 1) / chunks.length) * 45), `Rate limit pause — next batch in ${s}s…`);
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
       }
 
       setProgress(72, 'Cross-batch merge pass…');
