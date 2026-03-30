@@ -2420,7 +2420,7 @@ Reply ONLY with compact JSON, no markdown, no explanation:
 {"groups":[{"name":"short product name","reason":"brief variant summary","items":[0,2,5]}],"ungrouped":[3,7],"extracted":{"0":{"size":"25 ct, Pack of 2","color":""},"2":{"size":"25 ct","color":""}}}
 
 IMPORTANT for the "extracted" field:
-- "size" must be ONLY the actual size, quantity, weight, volume, count, or pack descriptor — e.g. "25 ct", "25 ct, Pack of 2", "5 lb. (2-pack)", "32 fl. oz.". Do NOT include marketing phrases, rankings, claims, or origin statements (e.g. do not include "#1 Best Selling", "Made in the USA", "Award Winning", "Doctor Recommended", "Pack of" without a size, or any text that is not a physical measurement or pack count).
+- "size" must contain ONLY physical product size, weight, volume, count, or pack multiplier. Examples of valid values: "25 ct", "5 lb.", "32 fl. oz.", "1.5 cu. ft.", "Pack of 2", "25 ct, Pack of 2", "6-pack". Do NOT include: coverage areas (sq. ft.), duration claims (feeds up to X weeks), feature descriptions, rankings, origin statements, or any phrase that describes what the product does rather than its physical quantity. If no valid size/count/pack exists in the title, return an empty string.
 - "color" should be the full color, flavor, or scent descriptor if present, otherwise leave empty.
 - Every product index must appear in either a group or ungrouped, and must have an entry in extracted.`;
   addLog('Calling Claude AI...', 'info');
@@ -2474,48 +2474,18 @@ IMPORTANT for the "extracted" field:
   setStep('step-build');
   addLog('Calculating content similarity scores...', 'info');
 
-  // Extract full size + pack descriptor by collecting all consecutive trailing
-  // comma-segments that look like variant info (short + has digit/size word/clothing size).
-  // e.g. "Product, For Outdoor Use, 25 ct, Pack of 2" → "25 ct, Pack of 2"
-  function extractSizeFromTitle(title, fallback) {
-    if (!title) return fallback || '';
-    const segments = title.split(',').map(s => s.trim()).filter(Boolean);
-    if (segments.length < 2) return fallback || '';
-
-    // Pure size/pack units — these are the ONLY things allowed in size
-    const sizeUnitRe = /\b(\d[\d.,]*\s*(oz|fl\.?\s*oz|lb|lbs|g|kg|ml|l|ct|count|pack|pcs?|piece|pieces|tablet|tabs?|caps?|capsule|gal|gallon|cu\.?\s*ft|sq\.?\s*ft|pt|qt|mg|mcg|iu|inch|in|cm|mm|worm bait|bait station|trap|plug|refill|band|cartridge|sprayer|station)s?\.?\b)/i;
-    const packRe = /^\(?\d+[\s-]?(pack|pk|count|ct|bag|pallet)\)?$/i;
-    const bulkRe = /^(bulk pallet|pallet)\s*-\s*/i;
-
-    // Feature/marketing phrases to exclude — if a segment matches these, reject it
-    const featureRe = /^(feeds|covers|prevents|kills|protects|controls|works|treats|provides|up to|won't|does not|for use|suitable|designed|ideal|perfect|includes|contains|with |without |bonus|free |new |value |best |top |#\d|made in|doctor|award|trusted)/i;
-
-    function isPureSizeSegment(seg) {
-      // Strip bulk prefix for testing
-      const s = seg.replace(bulkRe, '').trim();
-      // Must contain an actual measurement
-      if (!sizeUnitRe.test(s) && !packRe.test(s)) return false;
-      // Must NOT be a feature claim
-      if (featureRe.test(s)) return false;
-      // Must be short — real size segments are concise
-      if (s.split(/\s+/).length > 6) return false;
-      return true;
-    }
-
-    function cleanSeg(seg) {
-      return seg.replace(bulkRe, '').trim();
-    }
-
-    const trailing = [];
-    for (let i = segments.length - 1; i >= 1; i--) {
-      if (isPureSizeSegment(segments[i])) trailing.unshift(cleanSeg(segments[i]));
-      else break;
-    }
-
-    return trailing.length > 0 ? trailing.join(', ') : (fallback || '');
+  // Build state.groups
+  // Strip coverage area (sq. ft.) from size — it describes what the product covers, not its physical size
+  function cleanSize(raw) {
+    if (!raw) return '';
+    return raw
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => !/\bsq\.?\s*ft\.?\b/i.test(s))
+      .join(', ')
+      .trim();
   }
 
-  // Build state.groups
   state.groups = aiResult.groups.map((g, gIdx) => ({
     id: gIdx + 1,
     name: g.name,
@@ -2525,7 +2495,7 @@ IMPORTANT for the "extracted" field:
       const extr = (aiResult.extracted || {})[itemIdx] || {};
       return {
         ...p,
-        extractedSize: extractSizeFromTitle(p.title, extr.size || p.size || ''),
+        extractedSize: cleanSize(extr.size),
         extractedColor: extr.color || p.color || '',
         groupId: gIdx + 1,
       };
@@ -2537,7 +2507,7 @@ IMPORTANT for the "extracted" field:
     const extr = (aiResult.extracted || {})[itemIdx] || {};
     return {
       ...p,
-      extractedSize: extractSizeFromTitle(p.title, extr.size || p.size || ''),
+      extractedSize: cleanSize(extr.size),
       extractedColor: extr.color || p.color || '',
       groupId: null
     };
