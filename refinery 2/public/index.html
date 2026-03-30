@@ -1348,12 +1348,30 @@
     <div style="font-family: 'DM Serif Display', serif; font-size: 2.2rem; color: #f0f4ff; margin-bottom: 6px;">
       The <span style="color: #f97316;">Refinery</span>
     </div>
-    <p style="font-size: 0.85rem; color: #6b7fa8; margin-bottom: 32px; font-family: 'DM Sans', sans-serif;">Enter your password to continue</p>
+    <p style="font-size: 0.85rem; color: #6b7fa8; margin-bottom: 32px; font-family: 'DM Sans', sans-serif;">Enter your password and Anthropic API key to continue</p>
     <div style="position: relative; margin-bottom: 12px;">
       <input
         id="password-input"
         type="password"
         placeholder="Password"
+        onkeydown="if(event.key==='Enter') document.getElementById('apikey-input').focus()"
+        style="
+          width: 100%; padding: 14px 18px;
+          background: #0d1526; border: 1.5px solid #1e2d4d;
+          border-radius: 10px; color: #f0f4ff;
+          font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+          outline: none; box-sizing: border-box;
+          transition: border-color 0.2s;
+        "
+        onfocus="this.style.borderColor='#3b82f6'"
+        onblur="this.style.borderColor='#1e2d4d'"
+      />
+    </div>
+    <div style="position: relative; margin-bottom: 12px;">
+      <input
+        id="apikey-input"
+        type="password"
+        placeholder="Anthropic API key (sk-ant-...)"
         onkeydown="if(event.key==='Enter') checkPassword()"
         style="
           width: 100%; padding: 14px 18px;
@@ -1377,6 +1395,7 @@
     " onmouseover="this.style.background='#ea6c0a'" onmouseout="this.style.background='#f97316'">
       Unlock
     </button>
+    <p style="font-size:0.72rem; color:#2d3d5a; margin-top:16px; font-family:'DM Sans',sans-serif; line-height:1.5;">Your API key is used only for this session and never stored.</p>
   </div>
 </div>
 
@@ -1433,11 +1452,17 @@
 
 async function checkPassword() {
   const input = document.getElementById('password-input').value;
+  const apiKey = document.getElementById('apikey-input').value.trim();
   const err = document.getElementById('password-error');
+
   if (!input) { err.textContent = 'Please enter a password.'; return; }
+  if (!apiKey) { err.textContent = 'Please enter your Anthropic API key.'; return; }
+  if (!apiKey.startsWith('sk-ant-')) { err.textContent = 'API key should start with sk-ant-'; return; }
+
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
   const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
   if (hex === 'b88c041653c4a346695fe5083a5e6d87954f2ad7bf1389ac2f5f54073865380e') {
+    window.ANTHROPIC_API_KEY = apiKey;
     document.getElementById('password-gate').style.display = 'none';
     document.getElementById('mode-selector').style.display = 'flex';
     err.textContent = '';
@@ -1505,11 +1530,17 @@ async function checkPassword() {
       display:flex; flex-direction:column;
     " onmouseover="this.style.borderColor='#3b82f6';this.style.background='rgba(59,130,246,0.05)'"
        onmouseout="this.style.borderColor='#1e2d4d';this.style.background='#0d1526'">
-      <div style="position:absolute;top:12px;right:12px;font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;font-family:'DM Mono',monospace;background:rgba(251,191,36,0.12);color:#f59e0b;border:1px solid rgba(251,191,36,0.25);padding:2px 7px;border-radius:4px;">Beta</div>
-      <div style="font-size:2rem; margin-bottom:16px;">⚗️</div>
-      <div style="font-family:'DM Serif Display',serif; font-size:1.5rem; color:#f0f4ff; margin-bottom:8px;">Prompt <span style="color:#3b82f6;">Vault</span></div>
-      <div style="font-family:'DM Sans',sans-serif; font-size:0.85rem; color:#6b7fa8; line-height:1.5; flex:1;">Turn raw briefs, notes, and client input into structured AI instructions. Outputs field-by-field prompts plus a human awareness list.</div>
-      <div style="margin-top:24px; font-family:'DM Mono',monospace; font-size:0.72rem; color:#3b82f6; letter-spacing:0.08em; text-transform:uppercase;">Brief Interpreter →</div>
+      <!-- BETA watermark pattern -->
+      <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:14px;">
+        <div style="position:absolute;inset:-20px;display:flex;flex-wrap:wrap;gap:18px;transform:rotate(-20deg);transform-origin:center;opacity:0.07;">
+          <span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span><span style="font-size:0.55rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:0.12em;color:#f59e0b;white-space:nowrap;">BETA</span>
+        </div>
+      </div>
+      <div style="position:absolute;top:12px;right:12px;font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;font-family:'DM Mono',monospace;background:rgba(251,191,36,0.12);color:#f59e0b;border:1px solid rgba(251,191,36,0.25);padding:2px 7px;border-radius:4px;z-index:1;">Beta</div>
+      <div style="position:relative;z-index:1;font-size:2rem; margin-bottom:16px;">⚗️</div>
+      <div style="position:relative;z-index:1;font-family:'DM Serif Display',serif; font-size:1.5rem; color:#f0f4ff; margin-bottom:8px;">Prompt <span style="color:#3b82f6;">Vault</span></div>
+      <div style="position:relative;z-index:1;font-family:'DM Sans',sans-serif; font-size:0.85rem; color:#6b7fa8; line-height:1.5; flex:1;">Turn raw briefs, notes, and client input into structured AI instructions. Outputs field-by-field prompts plus a human awareness list.</div>
+      <div style="position:relative;z-index:1;margin-top:24px; font-family:'DM Mono',monospace; font-size:0.72rem; color:#3b82f6; letter-spacing:0.08em; text-transform:uppercase;">Brief Interpreter →</div>
     </div>
 
   </div>
@@ -2278,6 +2309,32 @@ function removeFile() {
 // ============================================================
 // PROCESSING — calls Claude API
 // ============================================================
+async function callClaude(prompt, system, signal) {
+  const body = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8000,
+    messages: [{ role: 'user', content: prompt }],
+  };
+  if (system) body.system = system;
+
+  const opts = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': window.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify(body),
+  };
+  if (signal) opts.signal = signal;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', opts);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || 'API error');
+  return data;
+}
+
 async function startProcessing() {
   goToPage('page-processing', 3);
   const log = document.getElementById('processing-log');
@@ -2420,47 +2477,192 @@ Reply ONLY with compact JSON, no markdown, no explanation:
 {"groups":[{"name":"short product name","reason":"brief variant summary","items":[0,2,5]}],"ungrouped":[3,7],"extracted":{"0":{"size":"25 ct, Pack of 2","color":""},"2":{"size":"25 ct","color":""}}}
 
 IMPORTANT for the "extracted" field:
-- "size" must be ONLY the actual size, quantity, weight, volume, count, or pack descriptor — e.g. "25 ct", "25 ct, Pack of 2", "5 lb. (2-pack)", "32 fl. oz.". Do NOT include marketing phrases, rankings, claims, or origin statements (e.g. do not include "#1 Best Selling", "Made in the USA", "Award Winning", "Doctor Recommended", "Pack of" without a size, or any text that is not a physical measurement or pack count).
+- "size" must contain ONLY physical product size, weight, volume, count, or pack multiplier. Examples of valid values: "25 ct", "5 lb.", "32 fl. oz.", "1.5 cu. ft.", "Pack of 2", "25 ct, Pack of 2", "6-pack". Do NOT include: coverage areas (sq. ft.), duration claims (feeds up to X weeks), feature descriptions, rankings, origin statements, or any phrase that describes what the product does rather than its physical quantity. If no valid size/count/pack exists in the title, return an empty string.
 - "color" should be the full color, flavor, or scent descriptor if present, otherwise leave empty.
 - Every product index must appear in either a group or ungrouped, and must have an entry in extracted.`;
   addLog('Calling Claude AI...', 'info');
   setProgress(25, 'Sending to AI for analysis');
   setStep('step-ai');
 
+  const CHUNK_SIZE = 60;
   let aiResult = null;
 
-  try {
-    addLog('Sending request...', 'info');
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
-    const response = await fetch('/api/group', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt }),
-    });
-
-    clearTimeout(timeout);
-    addLog(`Response status: ${response.status}`, response.ok ? 'info' : 'warn');
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      addLog(`API error: ${JSON.stringify(data.error || data)}`, 'warn');
-      throw new Error(data.error?.message || 'API error');
+  async function processChunk(chunkProducts, chunkOffset, chunkIdx, totalChunks) {
+    const chunkMustGroupPairs = [];
+    const chunkSimHints = [];
+    for (let i = 0; i < chunkProducts.length; i++) {
+      for (let j = i + 1; j < chunkProducts.length; j++) {
+        const sim = contentSimilarity(chunkProducts[i], chunkProducts[j]);
+        const ci = chunkProducts[i].idx;
+        const cj = chunkProducts[j].idx;
+        if (sim >= 90) chunkMustGroupPairs.push(`[${ci}]+[${cj}] (${sim}% match)`);
+        else if (sim >= 80) chunkSimHints.push(`[${ci}]+[${cj}]=${sim}%`);
+      }
     }
 
-    setProgress(70, 'Groupings identified');
-    const text = data.content.map(c => c.text || '').join('');
-    addLog('AI response received', 'success');
+    const chunkLines = chunkProducts.map(p => '[' + p.idx + '] ' + p.title).join('\n');
+    const chunkPrompt = `You are grouping e-commerce product listings. Products are the same item sold in different variants and should be grouped together. Products that are fundamentally different items must never be grouped.
 
+TWO QUESTIONS TO ASK FOR EACH POTENTIAL GROUP:
+1. Is the base product name the same (ignoring size, count, or pack descriptors)?
+2. Are ALL non-size attributes — flavor, color, scent, finish, formula, form factor — identical between them?
+
+If YES to both → same group.
+If NO to either → separate groups.
+
+WHAT CAN DIFFER WITHIN A GROUP (size/quantity only):
+- Any numeric measurement: weight, volume, dimensions, area, count, pieces, doses, servings, etc.
+- Pack count: single unit vs multi-pack
+
+WHAT MUST BE IDENTICAL WITHIN A GROUP (everything else):
+- Flavor, color, scent, finish, pattern — if any of these differ, they are separate groups, no exceptions
+- Formula, ingredients, active agents, composition
+- Form factor (liquid, powder, tablet, spray, gel, etc.)
+- Intended use, application, or target
+- What is physically included in the box
+
+NON-VARIANT DIFFERENCES — always separate groups regardless of name similarity:
+- One includes an accessory, tool, applicator, or bundled item the other does not
+- One is a refill, replacement, or cartridge for a device
+- Different form factors
+- Different intended uses or applications
+- Any descriptor that changes what you physically receive beyond just more/less of the exact same thing
+
+MANDATORY GROUPS — pairs pre-verified by content analysis with 90%+ similarity. Place these in the same group, no exceptions:
+${chunkMustGroupPairs.length > 0 ? chunkMustGroupPairs.join('\n') : '(none)'}
+
+ADVISORY (80-89% similarity) — group only if title differences are purely size or pack count, and all other attributes are identical:
+${chunkSimHints.length > 0 ? chunkSimHints.join(', ') : '(none)'}
+
+PRODUCTS:
+${chunkLines}
+
+Reply ONLY with compact JSON, no markdown, no explanation:
+{"groups":[{"name":"short product name","reason":"brief variant summary","items":[0,2,5]}],"ungrouped":[3,7],"extracted":{"0":{"size":"25 ct, Pack of 2","color":""},"2":{"size":"25 ct","color":""}}}
+
+IMPORTANT for the "extracted" field:
+- "size" must contain ONLY physical product size, weight, volume, count, or pack multiplier. Examples: "25 ct", "5 lb.", "32 fl. oz.", "Pack of 2". Do NOT include coverage areas, duration claims, feature descriptions, or rankings.
+- "color" should be the full color, flavor, or scent descriptor if present, otherwise leave empty.
+- Every product index must appear in either a group or ungrouped, and must have an entry in extracted.`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000);
+    const data = await callClaude(chunkPrompt, null, controller.signal);
+    clearTimeout(timeout);
+
+    const text = data.content.map(c => c.text || '').join('');
     const clean = text.replace(/```json|```/g, '').trim();
-    aiResult = JSON.parse(clean);
-    addLog(`Identified ${aiResult.groups.length} groups`, 'success');
+    return JSON.parse(clean);
+  }
+
+  try {
+    if (products.length <= CHUNK_SIZE) {
+      // Single pass
+      addLog('Sending request...', 'info');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
+      const data = await callClaude(prompt, null, controller.signal);
+      clearTimeout(timeout);
+      addLog(`Response status: 200`, 'info');
+      const text = data.content.map(c => c.text || '').join('');
+      aiResult = JSON.parse(text.replace(/```json|```/g, '').trim());
+      addLog(`Identified ${aiResult.groups.length} groups`, 'success');
+    } else {
+      // Chunked pass
+      const chunks = [];
+      for (let i = 0; i < products.length; i += CHUNK_SIZE) {
+        chunks.push(products.slice(i, i + CHUNK_SIZE));
+      }
+      addLog(`Large batch detected — splitting into ${chunks.length} chunks of ~${CHUNK_SIZE}`, 'info');
+
+      const mergedGroups = [];
+      const mergedUngrouped = [];
+      const mergedExtracted = {};
+
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const pct = 25 + Math.round((ci / chunks.length) * 45);
+        setProgress(pct, `Processing batch ${ci + 1} of ${chunks.length}…`);
+        addLog(`Batch ${ci + 1}/${chunks.length}: ${chunks[ci].length} products`, 'info');
+
+        const chunkResult = await processChunk(chunks[ci], ci * CHUNK_SIZE, ci, chunks.length);
+
+        // Remap group item indices — they're already global (product.idx) so no remapping needed
+        mergedGroups.push(...chunkResult.groups);
+        mergedUngrouped.push(...(chunkResult.ungrouped || []));
+        Object.assign(mergedExtracted, chunkResult.extracted || {});
+
+        addLog(`Batch ${ci + 1} done: ${chunkResult.groups.length} groups`, 'success');
+      }
+
+      setProgress(72, 'Cross-batch merge pass…');
+      addLog('Running cross-batch merge to catch split groups…', 'info');
+
+      // Cross-chunk merge: find groups from different chunks that should be combined
+      // Use content similarity to identify candidates, then confirm via a lightweight AI pass
+      const groupSummaries = mergedGroups.map((g, i) => {
+        const parentIdx = g.items[0];
+        const parentTitle = (products[parentIdx] || {}).title || g.name;
+        return `[G${i}] ${parentTitle.slice(0, 80)} (${g.items.length} item${g.items.length > 1 ? 's' : ''})`;
+      });
+
+      // Find cross-chunk mandatory pairs
+      const crossMust = [];
+      for (let i = 0; i < mergedGroups.length; i++) {
+        for (let j = i + 1; j < mergedGroups.length; j++) {
+          const pi = products[mergedGroups[i].items[0]];
+          const pj = products[mergedGroups[j].items[0]];
+          if (!pi || !pj) continue;
+          const sim = contentSimilarity(pi, pj);
+          if (sim >= 85) crossMust.push({ i, j, sim });
+        }
+      }
+
+      if (crossMust.length > 0) {
+        addLog(`${crossMust.length} potential cross-batch merges found — verifying…`, 'info');
+
+        const mergePrompt = `You have groups of e-commerce products from separate processing batches. Some groups may belong together as the same product variant family. For each pair listed below, decide: should these groups be MERGED into one, or kept SEPARATE?
+
+Apply the same rule: merge only if they share the same base product name AND differ only in size, count, or pack. Keep separate if flavor, color, scent, form factor, or included contents differ.
+
+GROUPS:
+${crossMust.map(({i, j, sim}) => `Pair (${i},${j}) ${sim}% sim:\n  A: ${groupSummaries[i]}\n  B: ${groupSummaries[j]}`).join('\n\n')}
+
+Reply ONLY with compact JSON array of pairs to merge (empty array if none):
+[{"a":0,"b":1},{"a":2,"b":5}]`;
+
+        try {
+          const mergeController = new AbortController();
+          const mergeTimeout = setTimeout(() => mergeController.abort(), 60000);
+          const mergeData = await callClaude(mergePrompt, null, mergeController.signal);
+          clearTimeout(mergeTimeout);
+          if (mergeData) {
+            const mergeText = mergeData.content.map(c => c.text || '').join('');
+            const mergePairs = JSON.parse(mergeText.replace(/```json|```/g, '').trim());
+
+            // Apply merges — combine group b into group a, mark b for removal
+            const toRemove = new Set();
+            mergePairs.forEach(({ a, b }) => {
+              if (toRemove.has(a) || toRemove.has(b)) return;
+              mergedGroups[a].items.push(...mergedGroups[b].items);
+              toRemove.add(b);
+              addLog(`Merged group ${b} into group ${a}`, 'success');
+            });
+            // Filter out merged groups
+            const finalGroups = mergedGroups.filter((_, i) => !toRemove.has(i));
+            aiResult = { groups: finalGroups, ungrouped: mergedUngrouped, extracted: mergedExtracted };
+          } else {
+            aiResult = { groups: mergedGroups, ungrouped: mergedUngrouped, extracted: mergedExtracted };
+          }
+        } catch(mergeErr) {
+          addLog('Cross-batch merge skipped: ' + mergeErr.message, 'warn');
+          aiResult = { groups: mergedGroups, ungrouped: mergedUngrouped, extracted: mergedExtracted };
+        }
+      } else {
+        aiResult = { groups: mergedGroups, ungrouped: mergedUngrouped, extracted: mergedExtracted };
+      }
+
+      addLog(`Final: ${aiResult.groups.length} groups across ${products.length} products`, 'success');
+    }
   } catch (err) {
     addLog(`Error: ${err.message} — using fallback grouping`, 'warn');
     aiResult = {
@@ -2474,48 +2676,18 @@ IMPORTANT for the "extracted" field:
   setStep('step-build');
   addLog('Calculating content similarity scores...', 'info');
 
-  // Extract full size + pack descriptor by collecting all consecutive trailing
-  // comma-segments that look like variant info (short + has digit/size word/clothing size).
-  // e.g. "Product, For Outdoor Use, 25 ct, Pack of 2" → "25 ct, Pack of 2"
-  function extractSizeFromTitle(title, fallback) {
-    if (!title) return fallback || '';
-    const segments = title.split(',').map(s => s.trim()).filter(Boolean);
-    if (segments.length < 2) return fallback || '';
-
-    // Pure size/pack units — these are the ONLY things allowed in size
-    const sizeUnitRe = /\b(\d[\d.,]*\s*(oz|fl\.?\s*oz|lb|lbs|g|kg|ml|l|ct|count|pack|pcs?|piece|pieces|tablet|tabs?|caps?|capsule|gal|gallon|cu\.?\s*ft|sq\.?\s*ft|pt|qt|mg|mcg|iu|inch|in|cm|mm|worm bait|bait station|trap|plug|refill|band|cartridge|sprayer|station)s?\.?\b)/i;
-    const packRe = /^\(?\d+[\s-]?(pack|pk|count|ct|bag|pallet)\)?$/i;
-    const bulkRe = /^(bulk pallet|pallet)\s*-\s*/i;
-
-    // Feature/marketing phrases to exclude — if a segment matches these, reject it
-    const featureRe = /^(feeds|covers|prevents|kills|protects|controls|works|treats|provides|up to|won't|does not|for use|suitable|designed|ideal|perfect|includes|contains|with |without |bonus|free |new |value |best |top |#\d|made in|doctor|award|trusted)/i;
-
-    function isPureSizeSegment(seg) {
-      // Strip bulk prefix for testing
-      const s = seg.replace(bulkRe, '').trim();
-      // Must contain an actual measurement
-      if (!sizeUnitRe.test(s) && !packRe.test(s)) return false;
-      // Must NOT be a feature claim
-      if (featureRe.test(s)) return false;
-      // Must be short — real size segments are concise
-      if (s.split(/\s+/).length > 6) return false;
-      return true;
-    }
-
-    function cleanSeg(seg) {
-      return seg.replace(bulkRe, '').trim();
-    }
-
-    const trailing = [];
-    for (let i = segments.length - 1; i >= 1; i--) {
-      if (isPureSizeSegment(segments[i])) trailing.unshift(cleanSeg(segments[i]));
-      else break;
-    }
-
-    return trailing.length > 0 ? trailing.join(', ') : (fallback || '');
+  // Build state.groups
+  // Strip coverage area (sq. ft.) from size — it describes what the product covers, not its physical size
+  function cleanSize(raw) {
+    if (!raw) return '';
+    return raw
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => !/\bsq\.?\s*ft\.?\b/i.test(s))
+      .join(', ')
+      .trim();
   }
 
-  // Build state.groups
   state.groups = aiResult.groups.map((g, gIdx) => ({
     id: gIdx + 1,
     name: g.name,
@@ -2525,7 +2697,7 @@ IMPORTANT for the "extracted" field:
       const extr = (aiResult.extracted || {})[itemIdx] || {};
       return {
         ...p,
-        extractedSize: extractSizeFromTitle(p.title, extr.size || p.size || ''),
+        extractedSize: cleanSize(extr.size),
         extractedColor: extr.color || p.color || '',
         groupId: gIdx + 1,
       };
@@ -2537,7 +2709,7 @@ IMPORTANT for the "extracted" field:
     const extr = (aiResult.extracted || {})[itemIdx] || {};
     return {
       ...p,
-      extractedSize: extractSizeFromTitle(p.title, extr.size || p.size || ''),
+      extractedSize: cleanSize(extr.size),
       extractedColor: extr.color || p.color || '',
       groupId: null
     };
@@ -3529,18 +3701,9 @@ Reply ONLY with valid JSON, no markdown, no explanation:
   document.pvAddendumSystemPrompt = systemPrompt;
 
   try {
-    const response = await fetch('/api/group', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: existingContext,
-        system: systemPrompt,
-      }),
-    });
+    const data = await callClaude(existingContext, systemPrompt);
 
-    pvLog(`Response status: ${response.status}`, response.ok ? 'info' : 'warn');
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'API error');
+    pvLog(`Response received`, 'info');
 
     pvProgress(75, 'Building instructions');
     pvStep('pv-step-build');
@@ -3836,13 +3999,7 @@ async function pvRunAddendum() {
   const addendumPrompt = `EXISTING INSTRUCTIONS:\n${contextLines}\n\nEXISTING AWARENESS NOTES:\n${existingNotes}\n\nADDITIONAL INPUT TO INCORPORATE (only extract NEW rules not already covered above):\n${input}`;
 
   try {
-    const response = await fetch('/api/group', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: addendumPrompt, system: document.pvAddendumSystemPrompt }),
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'API error');
+    const data = await callClaude(addendumPrompt, document.pvAddendumSystemPrompt);
 
     const text = data.content.map(c => c.text || '').join('');
     const clean = text.replace(/```json|```/g, '').trim();
